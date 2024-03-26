@@ -1,1 +1,1 @@
-# wocker-pgsql-plugin
+# @wocker/pgsql-plugin
