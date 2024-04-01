@@ -1,6 +1,6 @@
 {
     "name": "@wocker/pgsql-plugin",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "author": "Kris Papercut<krispcut@gmail.com>",
     "description": "PostgreSQL plugin for wocker",
     "license": "MIT",
@@ -17,13 +17,12 @@
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "dependencies": {
-        "@wocker/core": "^1.0.8",
+        "@wocker/core": "^1.0.9",
         "@wocker/utils": "^1.0.3",
         "fs": "^0.0.1-security"
     },
     "devDependencies": {
-        "@types/dockerode": "^3.3.24",
         "@types/node": "^20.11.20",
-        "typescript": "^5.4.3"
+        "typescript": "^5.4.4"
     }
 }
