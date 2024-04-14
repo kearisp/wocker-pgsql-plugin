@@ -84,7 +84,7 @@ export class PgSqlController {
         await this.pgSqlService.admin();
     }
 
-    @Command("pgsql:default <service>")
+    @Command("pgsql:use <service>")
     public async default(service: string) {
         await this.pgSqlService.setDefault(service);
     }
