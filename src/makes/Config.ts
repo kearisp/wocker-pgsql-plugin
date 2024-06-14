@@ -1,33 +1,39 @@
 import {PickProperties} from "@wocker/core";
 
-import {Service} from "../types";
+import {Service, ServiceProps} from "./Service";
 
+
+export type ConfigProps = Omit<PickProperties<Config>, "services"> & {
+    services?: ServiceProps[];
+};
 
 export abstract class Config {
-    default?: string;
-    adminEmail?: string;
-    adminPassword?: string;
-    adminSkipPassword?: boolean;
-    services?: Service[];
+    public default?: string;
+    public adminEmail?: string;
+    public adminPassword?: string;
+    public adminSkipPassword?: boolean;
+    public services: Service[];
 
-    protected constructor(data: PickProperties<Config>) {
+    protected constructor(data?: ConfigProps) {
         const {
             adminEmail,
             adminPassword,
             adminSkipPassword,
             default: defaultService,
-            services
-        } = data;
+            services = []
+        } = data || {};
 
         this.adminEmail = adminEmail;
         this.adminPassword = adminPassword;
         this.adminSkipPassword = adminSkipPassword;
         this.default = defaultService;
-        this.services = services;
+        this.services = services.map((s) => {
+            return new Service(s);
+        });
     }
 
     public getService(name: string): Service | null {
-        const service = (this.services || []).find((service) => {
+        const service = this.services.find((service) => {
             return service.name === name;
         });
 
@@ -54,29 +60,25 @@ export abstract class Config {
         return service;
     }
 
-    public setService(name: string, service: Omit<Service, "name">): void {
+    public setService(name: string, service: Omit<ServiceProps, "name">): void {
         this.services = [
-            ...(this.services || []).filter((service) => {
+            ...this.services.filter((service) => {
                 return service.name !== name;
             }),
-            {
+            new Service({
                 name,
                 ...service
-            }
+            })
         ];
     }
 
     public unsetService(name: string): void {
-        this.services = (this.services || []).filter((service) => {
+        this.services = this.services.filter((service) => {
             return service.name !== name;
         });
     }
 
     public abstract save(): Promise<void>;
-
-    public static getContainerName(name: string): string {
-        return `pgsql-${name}.ws`;
-    }
 
     public toJSON() {
         return {
@@ -84,7 +86,9 @@ export abstract class Config {
             adminPassword: this.adminPassword,
             adminSkipPassword: this.adminSkipPassword,
             default: this.default,
-            services: this.services
+            services: this.services.length > 0 ? this.services.map((service) => {
+                return service.toJSON();
+            }) : undefined
         };
     }
 }
