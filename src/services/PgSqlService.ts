@@ -11,6 +11,7 @@ import {existsSync} from "fs";
 import * as Path from "path";
 
 import {Config} from "../makes/Config";
+import {Service} from "../types/Service";
 
 
 @Injectable()
@@ -112,7 +113,7 @@ export class PgSqlService {
         const config = await this.getConfig();
         const service = config.getServiceOrDefault(name);
 
-        const containerName = Config.getContainerName(service.name);
+        const containerName = service.containerName;
 
         if(restart) {
             await this.dockerService.removeContainer(containerName);
@@ -157,9 +158,7 @@ export class PgSqlService {
         const config = await this.getConfig();
         const service = config.getServiceOrDefault(name);
 
-        const containerName = Config.getContainerName(service.name);
-
-        await this.dockerService.removeContainer(containerName);
+        await this.dockerService.removeContainer(service.containerName);
     }
 
     public async admin() {
@@ -174,8 +173,7 @@ export class PgSqlService {
         const passwords: any = {};
 
         for(const service of config.services || []) {
-            const containerName = Config.getContainerName(service.name);
-            const container = await this.dockerService.getContainer(containerName);
+            const container = await this.dockerService.getContainer(service.containerName);
 
             if(!container) {
                 continue;
@@ -191,12 +189,12 @@ export class PgSqlService {
                 continue;
             }
 
-            passwords[service.name] = `${containerName}:5432:postgres:${service.user || ""}:${service.password || ""}`;
+            passwords[service.name] = `${service.containerName}:5432:postgres:${service.user || ""}:${service.password || ""}`;
 
             servers.push({
                 Group: "Servers",
                 Name: service.name,
-                Host: containerName,
+                Host: service.containerName,
                 Port: 5432,
                 MaintenanceDB: "postgres",
                 Username: service.user,
@@ -298,7 +296,16 @@ export class PgSqlService {
 
     protected async getConfig(): Promise<Config> {
         let data: PickProperties<Config> = !existsSync(this.configPath)
-            ? {services: []}
+            ? {
+                default: "default",
+                services: [
+                    {
+                        name: "default",
+                        user: "root",
+                        password: "root"
+                    }
+                ]
+            }
             : await FS.readJSON(this.configPath);
 
         return new class extends Config {
