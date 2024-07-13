@@ -54,9 +54,15 @@ export class PgSqlController {
             description: "Password"
         })
         password: string,
+        @Option("host", {
+            type: "string",
+            alias: "h",
+            description: "External host"
+        })
+        host: string,
         service: string
-    ) {
-        await this.pgSqlService.create(service, user, password);
+    ): Promise<void> {
+        await this.pgSqlService.create(service, user, password, host);
     }
 
     @Command("pgsql:destroy <service>")

@@ -35,7 +35,7 @@ export class PgSqlService {
         return Path.join(this.dbDir, service);
     }
 
-    public async init(email?: string, password?: string, skipPassword?: boolean) {
+    public async init(email?: string, password?: string, skipPassword?: boolean): Promise<void> {
         const config = await this.getConfig();
 
         if(!email) {
@@ -68,7 +68,7 @@ export class PgSqlService {
         await config.save();
     }
 
-    public async create(name: string, user?: string, password?: string) {
+    public async create(name: string, user?: string, password?: string, host?: string): Promise<void> {
         const config = await this.getConfig();
         const service = config.getService(name) || {
             name,
@@ -79,7 +79,7 @@ export class PgSqlService {
         if(!user) {
             user = await promptText({
                 type: "string",
-                message: "User",
+                message: "Database user:",
                 default: service.user
             });
         }
@@ -87,20 +87,21 @@ export class PgSqlService {
         if(!password) {
             password = await promptText({
                 type: "string",
-                message: "Password",
+                message: "Database password:",
                 default: service.password
             });
         }
 
         config.setService(name, {
             user,
-            password
+            password,
+            host
         });
 
         await config.save();
     }
 
-    public async destroy(service: string) {
+    public async destroy(service: string): Promise<void> {
         const config = await this.getConfig();
 
         config.unsetService(service);
@@ -108,11 +109,11 @@ export class PgSqlService {
         await config.save();
     }
 
-    public async start(name?: string, restart?: boolean) {
+    public async start(name?: string, restart?: boolean): Promise<void> {
         const config = await this.getConfig();
         const service = config.getServiceOrDefault(name);
 
-        const containerName = Config.getContainerName(service.name);
+        const containerName = service.containerName;
 
         if(restart) {
             await this.dockerService.removeContainer(containerName);
@@ -157,12 +158,10 @@ export class PgSqlService {
         const config = await this.getConfig();
         const service = config.getServiceOrDefault(name);
 
-        const containerName = Config.getContainerName(service.name);
-
-        await this.dockerService.removeContainer(containerName);
+        await this.dockerService.removeContainer(service.containerName);
     }
 
-    public async admin() {
+    public async admin(): Promise<void> {
         const config = await this.getConfig();
 
         if(!config.adminEmail || !config.adminPassword) {
@@ -174,8 +173,7 @@ export class PgSqlService {
         const passwords: any = {};
 
         for(const service of config.services || []) {
-            const containerName = Config.getContainerName(service.name);
-            const container = await this.dockerService.getContainer(containerName);
+            const container = await this.dockerService.getContainer(service.containerName);
 
             if(!container) {
                 continue;
@@ -191,12 +189,12 @@ export class PgSqlService {
                 continue;
             }
 
-            passwords[service.name] = `${containerName}:5432:postgres:${service.user || ""}:${service.password || ""}`;
+            passwords[service.name] = `${service.containerName}:5432:postgres:${service.user || ""}:${service.password || ""}`;
 
             servers.push({
                 Group: "Servers",
                 Name: service.name,
-                Host: containerName,
+                Host: service.containerName,
                 Port: 5432,
                 MaintenanceDB: "postgres",
                 Username: service.user,
@@ -298,7 +296,16 @@ export class PgSqlService {
 
     protected async getConfig(): Promise<Config> {
         let data: PickProperties<Config> = !existsSync(this.configPath)
-            ? {services: []}
+            ? {
+                default: "default",
+                services: [
+                    {
+                        name: "default",
+                        user: "root",
+                        password: "root"
+                    }
+                ]
+            }
             : await FS.readJSON(this.configPath);
 
         return new class extends Config {
