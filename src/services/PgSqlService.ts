@@ -68,7 +68,7 @@ export class PgSqlService {
         await config.save();
     }
 
-    public async create(name: string, user?: string, password?: string): Promise<void> {
+    public async create(name: string, user?: string, password?: string, host?: string): Promise<void> {
         const config = await this.getConfig();
         const service = config.getService(name) || {
             name,
@@ -79,7 +79,7 @@ export class PgSqlService {
         if(!user) {
             user = await promptText({
                 type: "string",
-                message: "User",
+                message: "Database user:",
                 default: service.user
             });
         }
@@ -87,14 +87,15 @@ export class PgSqlService {
         if(!password) {
             password = await promptText({
                 type: "string",
-                message: "Password",
+                message: "Database password:",
                 default: service.password
             });
         }
 
         config.setService(name, {
             user,
-            password
+            password,
+            host
         });
 
         await config.save();
@@ -160,7 +161,7 @@ export class PgSqlService {
         await this.dockerService.removeContainer(service.containerName);
     }
 
-    public async admin() {
+    public async admin(): Promise<void> {
         const config = await this.getConfig();
 
         if(!config.adminEmail || !config.adminPassword) {
