@@ -11,7 +11,6 @@ import {existsSync} from "fs";
 import * as Path from "path";
 
 import {Config} from "../makes/Config";
-import {Service} from "../types/Service";
 
 
 @Injectable()
@@ -36,7 +35,7 @@ export class PgSqlService {
         return Path.join(this.dbDir, service);
     }
 
-    public async init(email?: string, password?: string, skipPassword?: boolean) {
+    public async init(email?: string, password?: string, skipPassword?: boolean): Promise<void> {
         const config = await this.getConfig();
 
         if(!email) {
@@ -69,7 +68,7 @@ export class PgSqlService {
         await config.save();
     }
 
-    public async create(name: string, user?: string, password?: string) {
+    public async create(name: string, user?: string, password?: string): Promise<void> {
         const config = await this.getConfig();
         const service = config.getService(name) || {
             name,
@@ -101,7 +100,7 @@ export class PgSqlService {
         await config.save();
     }
 
-    public async destroy(service: string) {
+    public async destroy(service: string): Promise<void> {
         const config = await this.getConfig();
 
         config.unsetService(service);
@@ -109,7 +108,7 @@ export class PgSqlService {
         await config.save();
     }
 
-    public async start(name?: string, restart?: boolean) {
+    public async start(name?: string, restart?: boolean): Promise<void> {
         const config = await this.getConfig();
         const service = config.getServiceOrDefault(name);
 
