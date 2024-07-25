@@ -173,23 +173,32 @@ export class PgSqlService {
         const passwords: any = {};
 
         for(const service of config.services || []) {
-            const container = await this.dockerService.getContainer(service.containerName);
+            let host;
 
-            if(!container) {
-                continue;
+            if(service.host) {
+                host = service.host;
             }
+            else {
+                const container = await this.dockerService.getContainer(service.containerName);
 
-            const {
-                State: {
-                    Running
+                if(!container) {
+                    continue;
                 }
-            } = await container.inspect();
 
-            if(!Running) {
-                continue;
+                const {
+                    State: {
+                        Running
+                    }
+                } = await container.inspect();
+
+                if(!Running) {
+                    continue;
+                }
+
+                host = service.containerName;
             }
 
-            passwords[service.name] = `${service.containerName}:5432:postgres:${service.user || ""}:${service.password || ""}`;
+            passwords[service.name] = `${host}:5432:postgres:${service.user || ""}:${service.password || ""}`;
 
             servers.push({
                 Group: "Servers",
