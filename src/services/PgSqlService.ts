@@ -23,11 +23,11 @@ export class PgSqlService {
         protected readonly dockerService: DockerService
     ) {}
 
-    public get dbDir() {
+    public get dbDir(): string {
         return this.appConfigService.dataPath("db/pgsql");
     }
 
-    public get configPath() {
+    public get configPath(): string {
         return this.pluginConfigService.dataPath("config.json");
     }
 
@@ -68,7 +68,7 @@ export class PgSqlService {
         await config.save();
     }
 
-    public async create(name: string, user?: string, password?: string, host?: string): Promise<void> {
+    public async create(name: string, user?: string, password?: string, host?: string, port?: string): Promise<void> {
         const config = await this.getConfig();
         const service = config.getService(name) || {
             name,
@@ -95,7 +95,8 @@ export class PgSqlService {
         config.setService(name, {
             user,
             password,
-            host
+            host,
+            port
         });
 
         await config.save();
@@ -154,7 +155,7 @@ export class PgSqlService {
         console.info(`Started ${service.name} at ${containerName}`);
     }
 
-    public async stop(name?: string) {
+    public async stop(name?: string): Promise<void> {
         const config = await this.getConfig();
         const service = config.getServiceOrDefault(name);
 
@@ -174,6 +175,7 @@ export class PgSqlService {
 
         for(const service of config.services || []) {
             let host;
+            let port: number | string = 5432;
 
             if(service.host) {
                 host = service.host;
@@ -198,7 +200,7 @@ export class PgSqlService {
                 host = service.containerName;
             }
 
-            passwords[service.name] = `${host}:5432:postgres:${service.user || ""}:${service.password || ""}`;
+            passwords[service.name] = `${host}:${port}:postgres:${service.user || ""}:${service.password || ""}`;
 
             servers.push({
                 Group: "Servers",
@@ -283,7 +285,7 @@ export class PgSqlService {
         }
     }
 
-    public async setDefault(name: string) {
+    public async setDefault(name: string): Promise<void> {
         const config = await this.getConfig();
 
         if(!config.getService(name)) {
@@ -295,7 +297,7 @@ export class PgSqlService {
         await config.save();
     }
 
-    public async getServices() {
+    public async getServices(): Promise<string[]> {
         const config = await this.getConfig();
 
         return (config.services || []).map((service) => {

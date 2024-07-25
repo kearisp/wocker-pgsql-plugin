@@ -35,7 +35,7 @@ export class PgSqlController {
             alias: "s"
         })
         skipPassword?: boolean
-    ) {
+    ): Promise<void> {
         await this.pgSqlService.init(email, password, skipPassword);
         await this.pgSqlService.admin();
     }
@@ -60,13 +60,23 @@ export class PgSqlController {
             description: "External host"
         })
         host: string,
+        @Option("port", {
+            type: "number",
+            alias: "p",
+            description: "External port"
+        })
+        port: string,
         service: string
     ): Promise<void> {
-        await this.pgSqlService.create(service, user, password, host);
+        await this.pgSqlService.create(service, user, password, host, port);
+
+        if(host) {
+            await this.pgSqlService.admin();
+        }
     }
 
     @Command("pgsql:destroy <service>")
-    protected async destroy(service: string) {
+    protected async destroy(service: string): Promise<void> {
         await this.pgSqlService.destroy(service);
     }
 
@@ -79,24 +89,24 @@ export class PgSqlController {
         })
         restart?: boolean,
         service?: string
-    ) {
+    ): Promise<void> {
         await this.pgSqlService.start(service, restart);
         await this.pgSqlService.admin();
     }
 
     @Command("pgsql:stop [service]")
-    protected async stop(service?: string) {
+    protected async stop(service?: string): Promise<void> {
         await this.pgSqlService.stop(service);
         await this.pgSqlService.admin();
     }
 
     @Command("pgsql:use <service>")
-    public async default(service: string) {
+    public async default(service: string): Promise<void> {
         await this.pgSqlService.setDefault(service);
     }
 
     @Completion("service")
-    public async getServices() {
+    public async getServices(): Promise<string[]> {
         return this.pgSqlService.getServices();
     }
 }
