@@ -8,17 +8,20 @@ export class Service {
     public user?: string;
     public password?: string;
     public host?: string;
+    public port?: string | number;
 
     public constructor(data: ServiceProps) {
         const {
             name,
             host,
+            port,
             user,
             password
         } = data;
 
         this.name = name;
         this.host = host;
+        this.port = port;
         this.user = user;
         this.password = password;
     }
@@ -31,6 +34,7 @@ export class Service {
         return {
             name: this.name,
             host: this.host,
+            port: this.port,
             user: this.user,
             password: this.password
         };
