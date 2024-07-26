@@ -179,6 +179,10 @@ export class PgSqlService {
 
             if(service.host) {
                 host = service.host;
+
+                if(service.port) {
+                    port = service.port;
+                }
             }
             else {
                 const container = await this.dockerService.getContainer(service.containerName);
