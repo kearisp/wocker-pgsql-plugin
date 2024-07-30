@@ -179,6 +179,10 @@ export class PgSqlService {
 
             if(service.host) {
                 host = service.host;
+
+                if(service.port) {
+                    port = service.port;
+                }
             }
             else {
                 const container = await this.dockerService.getContainer(service.containerName);
@@ -205,7 +209,7 @@ export class PgSqlService {
             servers.push({
                 Group: "Servers",
                 Name: service.name,
-                Host: service.containerName,
+                Host: host,
                 Port: 5432,
                 MaintenanceDB: "postgres",
                 Username: service.user,
