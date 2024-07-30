@@ -209,7 +209,7 @@ export class PgSqlService {
             servers.push({
                 Group: "Servers",
                 Name: service.name,
-                Host: service.containerName,
+                Host: host,
                 Port: 5432,
                 MaintenanceDB: "postgres",
                 Username: service.user,
