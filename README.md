@@ -11,7 +11,7 @@ npm i -g @wocker/ws
 ```
 
 ```shell
-ws plugin add pgsql
+ws plugin:add pgsql
 ```
 
 

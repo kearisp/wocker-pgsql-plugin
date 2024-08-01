@@ -14,7 +14,7 @@ export abstract class Config {
     public adminSkipPassword?: boolean;
     public services: Service[];
 
-    protected constructor(data?: ConfigProps) {
+    public constructor(data?: ConfigProps) {
         const {
             adminEmail,
             adminPassword,
@@ -60,16 +60,19 @@ export abstract class Config {
         return service;
     }
 
-    public setService(name: string, service: Omit<ServiceProps, "name">): void {
-        this.services = [
-            ...this.services.filter((service) => {
-                return service.name !== name;
-            }),
-            new Service({
-                name,
-                ...service
-            })
-        ];
+    public setService(service: Service): void {
+        let exists = false;
+
+        for(let i = 0; i < this.services.length; i++) {
+            if(this.services[i].name === service.name) {
+                exists = true;
+                this.services[i] = service;
+            }
+        }
+
+        if(!exists) {
+            this.services.push(service);
+        }
     }
 
     public unsetService(name: string): void {
@@ -80,7 +83,7 @@ export abstract class Config {
 
     public abstract save(): Promise<void>;
 
-    public toJSON() {
+    public toJSON(): ConfigProps {
         return {
             adminEmail: this.adminEmail,
             adminPassword: this.adminPassword,
