@@ -7,10 +7,10 @@ import {
     PickProperties
 } from "@wocker/core";
 import {promptText, promptConfirm} from "@wocker/utils";
-import {existsSync} from "fs";
 import * as Path from "path";
 
 import {Config} from "../makes/Config";
+import {Service} from "../makes/Service";
 
 
 @Injectable()
@@ -28,7 +28,7 @@ export class PgSqlService {
     }
 
     public get configPath(): string {
-        return this.pluginConfigService.dataPath("config.json");
+        return "config.json";
     }
 
     public dbPath(service: string): string {
@@ -70,34 +70,35 @@ export class PgSqlService {
 
     public async create(name: string, user?: string, password?: string, host?: string, port?: string): Promise<void> {
         const config = await this.getConfig();
-        const service = config.getService(name) || {
-            name,
-            user,
-            password
-        };
+        let service = config.getService(name);
 
-        if(!user) {
-            user = await promptText({
-                type: "string",
+        if(!service) {
+            service = new Service({
+                name,
+                user,
+                password,
+                host,
+                port
+            });
+        }
+
+        if(!service.user) {
+            service.user = await promptText({
                 message: "Database user:",
+                type: "string",
                 default: service.user
             });
         }
 
-        if(!password) {
-            password = await promptText({
-                type: "string",
+        if(!service.password) {
+            service.password = await promptText({
                 message: "Database password:",
+                type: "password",
                 default: service.password
             });
         }
 
-        config.setService(name, {
-            user,
-            password,
-            host,
-            port
-        });
+        config.setService(service);
 
         await config.save();
     }
@@ -310,7 +311,7 @@ export class PgSqlService {
     }
 
     protected async getConfig(): Promise<Config> {
-        let data: PickProperties<Config> = !existsSync(this.configPath)
+        let data: PickProperties<Config> = !this.pluginConfigService.exists(this.configPath)
             ? {
                 default: "default",
                 services: [
@@ -321,19 +322,14 @@ export class PgSqlService {
                     }
                 ]
             }
-            : await FS.readJSON(this.configPath);
+            : await this.pluginConfigService.readJSON(this.configPath);
+
+        const _this = this;
 
         return new class extends Config {
-            public constructor(
-                private service: PgSqlService,
-                data: PickProperties<Config>
-            ) {
-                super(data);
+            public async save(): Promise<void> {
+                await _this.pluginConfigService.writeJSON(_this.configPath, this.toJSON());
             }
-
-            public async save() {
-                await FS.writeJSON(this.service.configPath, this.toJSON());
-            }
-        }(this, data);
+        }(data);
     }
 }
