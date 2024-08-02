@@ -10,6 +10,13 @@
     "main": "./lib/index.js",
     "types": "lib/index.d.ts",
     "homepage": "https://kearisp.github.io/wocker/plugins/pgsql",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/kearisp/wocker-pgsql-plugin.git"
+    },
+    "bugs": {
+        "url": "https://github.com/kearisp/wocker-pgsql-plugin/issues"
+    },
     "scripts": {
         "prepare": "npm run build",
         "watch": "tsc -w",
