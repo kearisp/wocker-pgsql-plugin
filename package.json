@@ -1,6 +1,6 @@
 {
     "name": "@wocker/pgsql-plugin",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "author": "Kris Papercut<krispcut@gmail.com>",
     "description": "PostgresSQL plugin for wocker",
     "license": "MIT",
@@ -10,6 +10,13 @@
     "main": "./lib/index.js",
     "types": "lib/index.d.ts",
     "homepage": "https://kearisp.github.io/wocker/plugins/pgsql",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/kearisp/wocker-pgsql-plugin.git"
+    },
+    "bugs": {
+        "url": "https://github.com/kearisp/wocker-pgsql-plugin/issues"
+    },
     "scripts": {
         "prepare": "npm run build",
         "watch": "tsc -w",
@@ -17,12 +24,11 @@
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "dependencies": {
-        "@wocker/core": "^1.0.11",
-        "@wocker/utils": "^1.0.4",
-        "fs": "^0.0.1-security"
+        "@wocker/core": "^1.0.12",
+        "@wocker/utils": "^1.0.5"
     },
     "devDependencies": {
         "@types/node": "^20.11.20",
-        "typescript": "^5.4.4"
+        "typescript": "^5.5.4"
     }
 }
