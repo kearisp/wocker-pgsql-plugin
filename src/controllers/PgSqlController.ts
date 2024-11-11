@@ -3,6 +3,7 @@ import {
     Command,
     Completion,
     Option,
+    Param,
     AppConfigService,
     DockerService
 } from "@wocker/core";
@@ -42,6 +43,8 @@ export class PgSqlController {
 
     @Command("pgsql:create <service>")
     protected async create(
+        @Param("service")
+        service: string,
         @Option("user", {
             type: "string",
             alias: "u",
@@ -65,8 +68,7 @@ export class PgSqlController {
             alias: "p",
             description: "External port"
         })
-        port: string,
-        service: string
+        port: string
     ): Promise<void> {
         await this.pgSqlService.create(service, user, password, host, port);
 
@@ -76,32 +78,42 @@ export class PgSqlController {
     }
 
     @Command("pgsql:destroy <service>")
-    protected async destroy(service: string): Promise<void> {
+    protected async destroy(
+        @Param("service")
+        service: string
+    ): Promise<void> {
         await this.pgSqlService.destroy(service);
     }
 
     @Command("pgsql:start [service]")
     protected async start(
+        @Param("service")
+        service?: string,
         @Option("restart", {
             type: "boolean",
             alias: "r",
             description: "Restart service"
         })
-        restart?: boolean,
-        service?: string
+        restart?: boolean
     ): Promise<void> {
         await this.pgSqlService.start(service, restart);
         await this.pgSqlService.admin();
     }
 
     @Command("pgsql:stop [service]")
-    protected async stop(service?: string): Promise<void> {
+    protected async stop(
+        @Param("service")
+        service?: string
+    ): Promise<void> {
         await this.pgSqlService.stop(service);
         await this.pgSqlService.admin();
     }
 
     @Command("pgsql:use <service>")
-    public async default(service: string): Promise<void> {
+    public async default(
+        @Param("service")
+        service: string
+    ): Promise<void> {
         await this.pgSqlService.setDefault(service);
     }
 
