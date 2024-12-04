@@ -9,6 +9,7 @@ export type ConfigProps = Omit<PickProperties<Config>, "services"> & {
 
 export abstract class Config {
     public default?: string;
+    public adminHost?: string;
     public adminEmail?: string;
     public adminPassword?: string;
     public adminSkipPassword?: boolean;
@@ -16,6 +17,7 @@ export abstract class Config {
 
     public constructor(data?: ConfigProps) {
         const {
+            adminHost,
             adminEmail,
             adminPassword,
             adminSkipPassword,
@@ -23,6 +25,7 @@ export abstract class Config {
             services = []
         } = data || {};
 
+        this.adminHost = adminHost;
         this.adminEmail = adminEmail;
         this.adminPassword = adminPassword;
         this.adminSkipPassword = adminSkipPassword;
@@ -85,6 +88,7 @@ export abstract class Config {
 
     public toJSON(): ConfigProps {
         return {
+            adminHost: this.adminHost,
             adminEmail: this.adminEmail,
             adminPassword: this.adminPassword,
             adminSkipPassword: this.adminSkipPassword,

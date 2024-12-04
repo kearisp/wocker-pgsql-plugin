@@ -117,13 +117,11 @@ export class PgSqlService {
         const config = await this.getConfig();
         const service = config.getServiceOrDefault(name);
 
-        const containerName = service.containerName;
-
         if(restart) {
-            await this.dockerService.removeContainer(containerName);
+            await this.dockerService.removeContainer(service.containerName);
         }
 
-        let container = await this.dockerService.getContainer(containerName);
+        let container = await this.dockerService.getContainer(service.containerName);
 
         if(!container) {
             const {
@@ -132,7 +130,7 @@ export class PgSqlService {
             } = service;
 
             container = await this.dockerService.createContainer({
-                name: containerName,
+                name: service.containerName,
                 image: "postgres:latest",
                 restart: "always",
                 volumes: [
@@ -155,7 +153,7 @@ export class PgSqlService {
             await container.start();
         }
 
-        console.info(`Started ${service.name} at ${containerName}`);
+        console.info(`Started ${service.name} at ${service.containerName}`);
     }
 
     public async stop(name?: string): Promise<void> {
