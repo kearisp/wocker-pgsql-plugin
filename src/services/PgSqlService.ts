@@ -106,6 +106,23 @@ export class PgSqlService {
         await config.save();
     }
 
+    public async upgrade(name?: string, image?: string, imageVersion?: string) {
+        const config = await this.getConfig();
+        const service = config.getServiceOrDefault(name);
+
+        if(image) {
+            service.image = image;
+        }
+
+        if(imageVersion) {
+            service.imageVersion = imageVersion;
+        }
+
+        config.setService(service);
+
+        await config.save();
+    }
+
     public async destroy(service: string): Promise<void> {
         const config = await this.getConfig();
 
@@ -149,7 +166,7 @@ export class PgSqlService {
 
             container = await this.dockerService.createContainer({
                 name: service.containerName,
-                image: "postgres:latest",
+                image: `${service.image}:${service.imageVersion}`,
                 restart: "always",
                 volumes: [
                     `${this.dbPath(service.name)}:/var/lib/postgresql/data`
