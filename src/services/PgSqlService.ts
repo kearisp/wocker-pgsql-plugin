@@ -8,6 +8,7 @@ import {
     ProxyService
 } from "@wocker/core";
 import {promptText, promptConfirm} from "@wocker/utils";
+import CliTable from "cli-table3";
 import * as Path from "path";
 
 import {Config} from "../makes/Config";
@@ -111,6 +112,23 @@ export class PgSqlService {
         config.unsetService(service);
 
         await config.save();
+    }
+
+    public async listTable(): Promise<string> {
+        const table = new CliTable({
+            head: ["Name", "Host"]
+        });
+
+        const config = await this.getConfig();
+
+        for(const service of config.services) {
+            table.push([
+                service.name + (config.default === service.name ? " (default)" : ""),
+                service.host || service.containerName
+            ]);
+        }
+
+        return table.toString();
     }
 
     public async start(name?: string, restart?: boolean): Promise<void> {
