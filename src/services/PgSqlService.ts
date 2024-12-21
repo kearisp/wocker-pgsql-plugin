@@ -8,6 +8,7 @@ import {
     ProxyService
 } from "@wocker/core";
 import {promptText, promptConfirm} from "@wocker/utils";
+import CliTable from "cli-table3";
 import * as Path from "path";
 
 import {Config} from "../makes/Config";
@@ -105,12 +106,46 @@ export class PgSqlService {
         await config.save();
     }
 
+    public async upgrade(name?: string, image?: string, imageVersion?: string) {
+        const config = await this.getConfig();
+        const service = config.getServiceOrDefault(name);
+
+        if(image) {
+            service.image = image;
+        }
+
+        if(imageVersion) {
+            service.imageVersion = imageVersion;
+        }
+
+        config.setService(service);
+
+        await config.save();
+    }
+
     public async destroy(service: string): Promise<void> {
         const config = await this.getConfig();
 
         config.unsetService(service);
 
         await config.save();
+    }
+
+    public async listTable(): Promise<string> {
+        const table = new CliTable({
+            head: ["Name", "Host"]
+        });
+
+        const config = await this.getConfig();
+
+        for(const service of config.services) {
+            table.push([
+                service.name + (config.default === service.name ? " (default)" : ""),
+                service.host || service.containerName
+            ]);
+        }
+
+        return table.toString();
     }
 
     public async start(name?: string, restart?: boolean): Promise<void> {
@@ -131,7 +166,7 @@ export class PgSqlService {
 
             container = await this.dockerService.createContainer({
                 name: service.containerName,
-                image: "postgres:latest",
+                image: `${service.image}:${service.imageVersion}`,
                 restart: "always",
                 volumes: [
                     `${this.dbPath(service.name)}:/var/lib/postgresql/data`

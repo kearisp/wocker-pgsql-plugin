@@ -5,7 +5,8 @@ import {
     Option,
     Param,
     AppConfigService,
-    DockerService
+    DockerService,
+    Description
 } from "@wocker/core";
 
 import {PgSqlService} from "../services/PgSqlService";
@@ -39,6 +40,14 @@ export class PgSqlController {
     ): Promise<void> {
         await this.pgSqlService.init(email, password, skipPassword);
         await this.pgSqlService.admin();
+    }
+
+    @Command("pgsql [service]")
+    public async pgsql(
+        @Param("service")
+        name?: string
+    ): Promise<void> {
+
     }
 
     @Command("pgsql:create <service>")
@@ -77,12 +86,38 @@ export class PgSqlController {
         }
     }
 
+    @Command("pgsql:upgrade [service]")
+    protected async upgrade(
+        @Param("service")
+        name?: string,
+        @Option("image", {
+            type: "string",
+            alias: "i",
+            description: "Image name"
+        })
+        image?: string,
+        @Option("image-version", {
+            type: "string",
+            alias: "I",
+            description: "Image version"
+        })
+        imageVersion?: string
+    ): Promise<void> {
+        await this.pgSqlService.upgrade(name, image, imageVersion);
+    }
+
     @Command("pgsql:destroy <service>")
     protected async destroy(
         @Param("service")
         service: string
     ): Promise<void> {
         await this.pgSqlService.destroy(service);
+    }
+
+    @Command("pgsql:ls")
+    @Description("")
+    public async list(): Promise<string> {
+        return this.pgSqlService.listTable();
     }
 
     @Command("pgsql:start [service]")

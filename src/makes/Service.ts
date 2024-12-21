@@ -9,6 +9,8 @@ export class Service {
     public password?: string;
     public host?: string;
     public port?: string | number;
+    public image?: string;
+    public imageVersion?: string;
 
     public constructor(data: ServiceProps) {
         const {
@@ -16,7 +18,9 @@ export class Service {
             host,
             port,
             user,
-            password
+            password,
+            image = "postgres",
+            imageVersion = "latest"
         } = data;
 
         this.name = name;
@@ -24,6 +28,8 @@ export class Service {
         this.port = port;
         this.user = user;
         this.password = password;
+        this.image = image;
+        this.imageVersion = imageVersion;
     }
 
     public get containerName(): string {
@@ -36,7 +42,9 @@ export class Service {
             host: this.host,
             port: this.port,
             user: this.user,
-            password: this.password
+            password: this.password,
+            image: this.image,
+            imageVersion: this.imageVersion
         };
     }
 }
