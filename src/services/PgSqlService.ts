@@ -8,7 +8,6 @@ import {
 } from "@wocker/core";
 import {promptText, promptConfirm} from "@wocker/utils";
 import CliTable from "cli-table3";
-import * as Path from "path";
 
 import {Config, ConfigProps} from "../makes/Config";
 import {Service} from "../makes/Service";
@@ -52,16 +51,12 @@ export class PgSqlService {
         return fs;
     }
 
-    public get dbDir(): string {
-        return this.appConfigService.dataPath("db/pgsql");
-    }
-
     public get configPath(): string {
         return "config.json";
     }
 
     public dbPath(service: string): string {
-        return Path.join(this.dbDir, service);
+        return this.appConfigService.dataPath("db/pgsql", service);
     }
 
     public async init(email?: string, password?: string, skipPassword?: boolean): Promise<void> {
