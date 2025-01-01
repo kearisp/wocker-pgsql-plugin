@@ -84,7 +84,7 @@ export abstract class Config {
         });
     }
 
-    public abstract save(): Promise<void>;
+    public abstract save(): void;
 
     public toJSON(): ConfigProps {
         return {

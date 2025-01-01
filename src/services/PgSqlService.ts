@@ -3,20 +3,20 @@ import {
     AppConfigService,
     PluginConfigService,
     DockerService,
-    FS,
-    PickProperties,
+    FileSystem,
     ProxyService
 } from "@wocker/core";
 import {promptText, promptConfirm} from "@wocker/utils";
-import * as Path from "path";
+import CliTable from "cli-table3";
 
-import {Config} from "../makes/Config";
+import {Config, ConfigProps} from "../makes/Config";
 import {Service} from "../makes/Service";
 
 
 @Injectable()
 export class PgSqlService {
     protected adminContainerName = "dbadmin-pgsql.workspace";
+    protected _config?: Config;
 
     public constructor(
         protected readonly appConfigService: AppConfigService,
@@ -25,8 +25,30 @@ export class PgSqlService {
         protected readonly proxyService: ProxyService
     ) {}
 
-    public get dbDir(): string {
-        return this.appConfigService.dataPath("db/pgsql");
+    public get config(): Config {
+        if(!this._config) {
+            const _this = this,
+                fs = this.fs,
+                data: ConfigProps = fs.exists("config.json") ? fs.readJSON("config.json") : {};
+
+            this._config = new class extends Config {
+                public save(): void {
+                    fs.writeJSON(_this.configPath, this.toJSON());
+                }
+            }(data)
+        }
+
+        return this._config;
+    }
+
+    public get fs(): FileSystem {
+        let fs = this.pluginConfigService.fs;
+
+        if(!fs) {
+            fs = new FileSystem(this.pluginConfigService.dataPath());
+        }
+
+        return fs;
     }
 
     public get configPath(): string {
@@ -34,11 +56,11 @@ export class PgSqlService {
     }
 
     public dbPath(service: string): string {
-        return Path.join(this.dbDir, service);
+        return this.appConfigService.dataPath("db/pgsql", service);
     }
 
     public async init(email?: string, password?: string, skipPassword?: boolean): Promise<void> {
-        const config = await this.getConfig();
+        const config = this.config;
 
         if(!email) {
             email = await promptText({
@@ -71,8 +93,7 @@ export class PgSqlService {
     }
 
     public async create(name: string, user?: string, password?: string, host?: string, port?: string): Promise<void> {
-        const config = await this.getConfig();
-        let service = config.getService(name);
+        let service = this.config.getService(name);
 
         if(!service) {
             service = new Service({
@@ -100,22 +121,48 @@ export class PgSqlService {
             });
         }
 
-        config.setService(service);
+        this.config.setService(service);
+        this.config.save();
+    }
 
-        await config.save();
+    public async upgrade(name?: string, image?: string, imageVersion?: string): Promise<void> {
+        const service = this.config.getServiceOrDefault(name);
+
+        if(image) {
+            service.image = image;
+        }
+
+        if(imageVersion) {
+            service.imageVersion = imageVersion;
+        }
+
+        this.config.setService(service);
+
+        this.config.save();
     }
 
     public async destroy(service: string): Promise<void> {
-        const config = await this.getConfig();
+        this.config.unsetService(service);
+        this.config.save();
+    }
 
-        config.unsetService(service);
+    public async listTable(): Promise<string> {
+        const table = new CliTable({
+            head: ["Name", "Host"]
+        });
 
-        await config.save();
+        for(const service of this.config.services) {
+            table.push([
+                service.name + (this.config.default === service.name ? " (default)" : ""),
+                service.host || service.containerName
+            ]);
+        }
+
+        return table.toString();
     }
 
     public async start(name?: string, restart?: boolean): Promise<void> {
-        const config = await this.getConfig();
-        const service = config.getServiceOrDefault(name);
+        const service = this.config.getServiceOrDefault(name);
 
         if(restart) {
             await this.dockerService.removeContainer(service.containerName);
@@ -131,7 +178,7 @@ export class PgSqlService {
 
             container = await this.dockerService.createContainer({
                 name: service.containerName,
-                image: "postgres:latest",
+                image: `${service.image}:${service.imageVersion}`,
                 restart: "always",
                 volumes: [
                     `${this.dbPath(service.name)}:/var/lib/postgresql/data`
@@ -157,14 +204,42 @@ export class PgSqlService {
     }
 
     public async stop(name?: string): Promise<void> {
-        const config = await this.getConfig();
-        const service = config.getServiceOrDefault(name);
+        const service = this.config.getServiceOrDefault(name);
 
         await this.dockerService.removeContainer(service.containerName);
     }
 
+    public async pgsql(name?: string): Promise<void> {
+        const service = this.config.getServiceOrDefault(name);
+
+        const container = await this.dockerService.getContainer(service.containerName);
+
+        if(!container) {
+            throw new Error(`Service "${service.name}" isn't started`);
+        }
+
+        await this.dockerService.exec(service.containerName, {
+            tty: true,
+            cmd: ["psql"]
+        });
+    }
+
+    public async dump(name?: string): Promise<void> {
+        const service = this.config.getServiceOrDefault(name);
+        const container = await this.dockerService.getContainer(service.containerName);
+
+        if(!container) {
+            throw new Error(`Service "${service.name}" isn't started`);
+        }
+
+        await this.dockerService.exec(service.containerName, {
+            tty: true,
+            cmd: ["pg_dump"]
+        });
+    }
+
     public async admin(): Promise<void> {
-        const config = await this.getConfig();
+        const config = this.config;
 
         if(!config.adminEmail || !config.adminPassword) {
             console.info("Can't start admin credentials missed");
@@ -225,7 +300,7 @@ export class PgSqlService {
             return;
         }
 
-        await FS.writeJSON(this.pluginConfigService.dataPath("servers.json"), {
+        this.fs.writeJSON("servers.json", {
             Servers: servers.reduce((res, server, index) => {
                 return {
                     ...res,
@@ -298,7 +373,7 @@ export class PgSqlService {
     }
 
     public async setDefault(name: string): Promise<void> {
-        const config = await this.getConfig();
+        const config = this.config;
 
         if(!config.getService(name)) {
             throw new Error(`Service "${name}" not found`);
@@ -310,33 +385,8 @@ export class PgSqlService {
     }
 
     public async getServices(): Promise<string[]> {
-        const config = await this.getConfig();
-
-        return (config.services || []).map((service) => {
+        return (this.config.services || []).map((service) => {
             return service.name;
         });
-    }
-
-    protected async getConfig(): Promise<Config> {
-        let data: PickProperties<Config> = !this.pluginConfigService.exists(this.configPath)
-            ? {
-                default: "default",
-                services: [
-                    {
-                        name: "default",
-                        user: "root",
-                        password: "root"
-                    }
-                ]
-            }
-            : await this.pluginConfigService.readJSON(this.configPath);
-
-        const _this = this;
-
-        return new class extends Config {
-            public async save(): Promise<void> {
-                await _this.pluginConfigService.writeJSON(_this.configPath, this.toJSON());
-            }
-        }(data);
     }
 }
