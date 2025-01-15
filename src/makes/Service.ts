@@ -1,7 +1,13 @@
-import {PickProperties} from "@wocker/core";
-
-
-export type ServiceProps = Omit<PickProperties<Service>, "containerName">;
+export type ServiceProps = {
+    name: string;
+    user?: string;
+    password?: string;
+    host?: string;
+    port?: string | number;
+    image?: string;
+    imageName?: string;
+    imageVersion?: string;
+};
 
 export class Service {
     public name: string;
@@ -9,7 +15,7 @@ export class Service {
     public password?: string;
     public host?: string;
     public port?: string | number;
-    public image?: string;
+    public imageName?: string;
     public imageVersion?: string;
 
     public constructor(data: ServiceProps) {
@@ -19,7 +25,8 @@ export class Service {
             port,
             user,
             password,
-            image = "postgres",
+            image,
+            imageName = image || "postgres",
             imageVersion = "latest"
         } = data;
 
@@ -28,7 +35,7 @@ export class Service {
         this.port = port;
         this.user = user;
         this.password = password;
-        this.image = image;
+        this.imageName = imageName;
         this.imageVersion = imageVersion;
     }
 
@@ -36,14 +43,18 @@ export class Service {
         return `pgsql-${this.name}.ws`;
     }
 
-    public toJSON(): ServiceProps {
+    public get imageTag(): string {
+        return `${this.imageName}:${this.imageVersion}`;
+    }
+
+    public toObject(): ServiceProps {
         return {
             name: this.name,
             host: this.host,
             port: this.port,
             user: this.user,
             password: this.password,
-            image: this.image,
+            imageName: this.imageName,
             imageVersion: this.imageVersion
         };
     }

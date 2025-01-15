@@ -10,7 +10,7 @@ import {promptText, promptConfirm} from "@wocker/utils";
 import CliTable from "cli-table3";
 
 import {Config, ConfigProps} from "../makes/Config";
-import {Service} from "../makes/Service";
+import {Service, ServiceProps} from "../makes/Service";
 
 
 @Injectable()
@@ -92,53 +92,67 @@ export class PgSqlService {
         await config.save();
     }
 
-    public async create(name: string, user?: string, password?: string, host?: string, port?: string): Promise<void> {
-        let service = this.config.getService(name);
+    public async create(serviceProps: Partial<ServiceProps> = {}): Promise<void> {
+        if(serviceProps.name && this.config.hasService(serviceProps.name)) {
+            console.info(`Service "${serviceProps.name}" is already exists`);
+            delete serviceProps.name;
+        }
 
-        if(!service) {
-            service = new Service({
-                name,
-                user,
-                password,
-                host,
-                port
+        if(!serviceProps.name) {
+            serviceProps.name = await promptText({
+                message: "Service name:",
+                validate: (name?: string) => {
+                    if(!name) {
+                        return "Service name is required";
+                    }
+
+                    if(this.config.getService(name)) {
+                        return `Service "${name}" is already exists`;
+                    }
+
+                    return true;
+                }
             });
         }
 
-        if(!service.user) {
-            service.user = await promptText({
+        if(!serviceProps.user) {
+            serviceProps.user = await promptText({
                 message: "Database user:",
                 type: "string",
-                default: service.user
+                default: serviceProps.user
             });
         }
 
-        if(!service.password) {
-            service.password = await promptText({
+        if(!serviceProps.password) {
+            serviceProps.password = await promptText({
                 message: "Database password:",
                 type: "password",
-                default: service.password
+                default: serviceProps.password
             });
         }
 
-        this.config.setService(service);
+        this.config.setService(new Service(serviceProps as ServiceProps));
         this.config.save();
     }
 
-    public async upgrade(name?: string, image?: string, imageVersion?: string): Promise<void> {
-        const service = this.config.getServiceOrDefault(name);
+    public async upgrade(serviceProps: Partial<ServiceProps>): Promise<void> {
+        const service = this.config.getServiceOrDefault(serviceProps.name);
+        let changed = false;
 
-        if(image) {
-            service.image = image;
+        if(serviceProps.imageName) {
+            service.imageName = serviceProps.imageName;
+            changed = true;
         }
 
-        if(imageVersion) {
-            service.imageVersion = imageVersion;
+        if(serviceProps.imageVersion) {
+            service.imageVersion = serviceProps.imageVersion;
+            changed = true;
         }
 
-        this.config.setService(service);
-
-        this.config.save();
+        if(changed) {
+            this.config.setService(service);
+            this.config.save();
+        }
     }
 
     public async destroy(service: string): Promise<void> {
@@ -178,7 +192,7 @@ export class PgSqlService {
 
             container = await this.dockerService.createContainer({
                 name: service.containerName,
-                image: `${service.image}:${service.imageVersion}`,
+                image: service.imageTag,
                 restart: "always",
                 volumes: [
                     `${this.dbPath(service.name)}:/var/lib/postgresql/data`
@@ -381,7 +395,7 @@ export class PgSqlService {
 
         config.default = name;
 
-        await config.save();
+        config.save();
     }
 
     public async getServices(): Promise<string[]> {

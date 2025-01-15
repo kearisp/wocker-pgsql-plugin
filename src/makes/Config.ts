@@ -35,6 +35,14 @@ export abstract class Config {
         });
     }
 
+    public hasService(name: string): boolean {
+        const service = this.services.find((service) => {
+            return service.name === name;
+        });
+
+        return !!service;
+    }
+
     public getService(name: string): Service | null {
         const service = this.services.find((service) => {
             return service.name === name;
@@ -94,7 +102,7 @@ export abstract class Config {
             adminSkipPassword: this.adminSkipPassword,
             default: this.default,
             services: this.services.length > 0 ? this.services.map((service) => {
-                return service.toJSON();
+                return service.toObject();
             }) : undefined
         };
     }
