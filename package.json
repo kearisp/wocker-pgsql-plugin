@@ -1,8 +1,8 @@
 {
     "name": "@wocker/pgsql-plugin",
-    "version": "1.0.9",
+    "version": "1.0.10",
     "author": "Kris Papercut <krispcut@gmail.com>",
-    "description": "PostgresSQL plugin for wocker",
+    "description": "PostgreSQL plugin for wocker",
     "license": "MIT",
     "main": "./lib/index.js",
     "types": "./lib/index.d.ts",
@@ -30,10 +30,10 @@
     },
     "dependencies": {
         "@wocker/core": "^1.0.21",
-        "@wocker/utils": "^1.0.7",
+        "@wocker/utils": "^1.0.9",
         "cli-table3": "^0.6.5"
     },
     "devDependencies": {
-        "typescript": "^5.7.2"
+        "typescript": "^5.7.3"
     }
 }

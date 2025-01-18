@@ -64,7 +64,7 @@ export class PgSqlController {
     @Description("Creates a PostgreSQL service with configurable user, password, host, and port options.")
     protected async create(
         @Param("service")
-        service: string,
+        name: string,
         @Option("user", {
             type: "string",
             alias: "u",
@@ -88,9 +88,29 @@ export class PgSqlController {
             alias: "p",
             description: "External port"
         })
-        port: string
+        port: string,
+        @Option("image", {
+            type: "string",
+            alias: "i",
+            description: "Image name"
+        })
+        imageName?: string,
+        @Option("image-version", {
+            type: "string",
+            alias: "I",
+            description: "Image version"
+        })
+        imageVersion?: string
     ): Promise<void> {
-        await this.pgSqlService.create(service, user, password, host, port);
+        await this.pgSqlService.create({
+            name,
+            user,
+            password,
+            host,
+            port,
+            imageName,
+            imageVersion
+        });
 
         if(host) {
             await this.pgSqlService.admin();
@@ -107,7 +127,7 @@ export class PgSqlController {
             alias: "i",
             description: "Image name"
         })
-        image?: string,
+        imageName?: string,
         @Option("image-version", {
             type: "string",
             alias: "I",
@@ -115,7 +135,11 @@ export class PgSqlController {
         })
         imageVersion?: string
     ): Promise<void> {
-        await this.pgSqlService.upgrade(name, image, imageVersion);
+        await this.pgSqlService.upgrade({
+            name,
+            imageName,
+            imageVersion
+        });
     }
 
     @Command("pgsql:destroy <service>")
