@@ -1,3 +1,8 @@
+export const STORAGE_VOLUME = "volume";
+export const STORAGE_FILESYSTEM = "filesystem";
+
+export type ServiceStorage = typeof STORAGE_VOLUME | typeof STORAGE_FILESYSTEM;
+
 export type ServiceProps = {
     name: string;
     user?: string;
@@ -7,6 +12,8 @@ export type ServiceProps = {
     image?: string;
     imageName?: string;
     imageVersion?: string;
+    storage?: ServiceStorage;
+    volume?: string;
 };
 
 export class Service {
@@ -17,6 +24,8 @@ export class Service {
     public port?: string | number;
     public imageName?: string;
     public imageVersion?: string;
+    public storage?: ServiceStorage;
+    public _volume?: string;
 
     public constructor(data: ServiceProps) {
         const {
@@ -25,9 +34,11 @@ export class Service {
             port,
             user,
             password,
+            storage = STORAGE_FILESYSTEM,
+            volume,
             image,
-            imageName = image || "postgres",
-            imageVersion = "latest"
+            imageName = image,
+            imageVersion,
         } = data;
 
         this.name = name;
@@ -35,6 +46,8 @@ export class Service {
         this.port = port;
         this.user = user;
         this.password = password;
+        this.storage = storage;
+        this._volume = volume;
         this.imageName = imageName;
         this.imageVersion = imageVersion;
     }
@@ -44,7 +57,30 @@ export class Service {
     }
 
     public get imageTag(): string {
-        return `${this.imageName}:${this.imageVersion}`;
+        let imageName = this.imageName,
+            imageVersion = this.imageVersion;
+
+        if(!imageName) {
+            imageName = "postgres";
+        }
+
+        if(!imageVersion) {
+            return imageName;
+        }
+
+        return `${imageName}:${imageVersion}`;
+    }
+
+    public get volume(): string {
+        if(!this._volume) {
+            this._volume = this.defaultVolume;
+        }
+
+        return this._volume;
+    }
+
+    public get defaultVolume(): string {
+        return `wocker-pgsql-${this.name}`;
     }
 
     public toObject(): ServiceProps {
@@ -55,7 +91,9 @@ export class Service {
             user: this.user,
             password: this.password,
             imageName: this.imageName,
-            imageVersion: this.imageVersion
+            imageVersion: this.imageVersion,
+            storage: this.storage,
+            volume: this._volume
         };
     }
 }

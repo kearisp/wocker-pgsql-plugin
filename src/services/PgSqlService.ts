@@ -1,16 +1,9 @@
-import {
-    Injectable,
-    AppConfigService,
-    PluginConfigService,
-    DockerService,
-    FileSystem,
-    ProxyService
-} from "@wocker/core";
-import {promptText, promptConfirm} from "@wocker/utils";
+import {AppConfigService, DockerService, FileSystem, Injectable, PluginConfigService, ProxyService} from "@wocker/core";
+import {promptConfirm, promptSelect, promptText} from "@wocker/utils";
 import CliTable from "cli-table3";
 
 import {Config, ConfigProps} from "../makes/Config";
-import {Service, ServiceProps} from "../makes/Service";
+import {Service, ServiceProps, ServiceStorage, STORAGE_FILESYSTEM, STORAGE_VOLUME} from "../makes/Service";
 
 
 @Injectable()
@@ -29,10 +22,18 @@ export class PgSqlService {
         if(!this._config) {
             const _this = this,
                 fs = this.fs,
-                data: ConfigProps = fs.exists("config.json") ? fs.readJSON("config.json") : {};
+                data: ConfigProps = fs.exists("config.json")
+                    ? fs.readJSON("config.json")
+                    : {};
 
             this._config = new class extends Config {
                 public save(): void {
+                    if(!fs.exists("")) {
+                        fs.mkdir("", {
+                            recursive: true
+                        });
+                    }
+
                     fs.writeJSON(_this.configPath, this.toJSON());
                 }
             }(data)
@@ -49,6 +50,10 @@ export class PgSqlService {
         }
 
         return fs;
+    }
+
+    public get dbFs(): FileSystem {
+        return new FileSystem(this.appConfigService.dataPath("db/pgsql"));
     }
 
     public get configPath(): string {
@@ -89,7 +94,7 @@ export class PgSqlService {
         config.adminPassword = password;
         config.adminSkipPassword = skipPassword;
 
-        await config.save();
+        config.save();
     }
 
     public async create(serviceProps: Partial<ServiceProps> = {}): Promise<void> {
@@ -119,6 +124,7 @@ export class PgSqlService {
             serviceProps.user = await promptText({
                 message: "Database user:",
                 type: "string",
+                required: true,
                 default: serviceProps.user
             });
         }
@@ -127,7 +133,24 @@ export class PgSqlService {
             serviceProps.password = await promptText({
                 message: "Database password:",
                 type: "password",
-                default: serviceProps.password
+                required: true,
+            });
+
+            const confirmPassword = await promptText({
+                message: "Confirm password:",
+                type: "password",
+                required: true
+            });
+
+            if(serviceProps.password !== confirmPassword) {
+                throw new Error("Passwords do not match");
+            }
+        }
+
+        if(!serviceProps.storage || ![STORAGE_VOLUME, STORAGE_FILESYSTEM].includes(serviceProps.storage)) {
+            serviceProps.storage = await promptSelect<ServiceStorage>({
+                message: "Storage:",
+                options: [STORAGE_VOLUME, STORAGE_FILESYSTEM]
             });
         }
 
@@ -155,8 +178,56 @@ export class PgSqlService {
         }
     }
 
-    public async destroy(service: string): Promise<void> {
-        this.config.unsetService(service);
+    public async destroy(name: string, yes?: boolean, force?: boolean): Promise<void> {
+        const service = this.config.getServiceOrDefault(name);
+
+        if(!force && service.name === this.config.default) {
+            throw new Error(`Can't delete default service.`);
+        }
+
+        if(!yes) {
+            const confirm = await promptConfirm({
+                message: `Are you sure you want to delete "${service.name}" service?`,
+                default: false
+            });
+
+            if(!confirm) {
+                throw new Error("Aborted");
+            }
+        }
+
+        if(!service.host) {
+            await this.dockerService.removeContainer(service.containerName);
+
+            switch(service.storage) {
+                case STORAGE_VOLUME:
+                    if(service.volume !== service.defaultVolume) {
+                        console.info(`Deletion of custom volume "${service.volume}" skipped.`);
+                        break;
+                    }
+
+                    if(!this.pluginConfigService.isVersionGTE("1.0.19")) {
+                        throw new Error("Please update wocker for using volume storage");
+                    }
+
+                    if(await this.dockerService.hasVolume(service.volume)) {
+                        await this.dockerService.rmVolume(service.volume);
+                    }
+                    break;
+
+                case STORAGE_FILESYSTEM:
+                    this.dbFs.rm(service.name, {
+                        recursive: true,
+                        force: true
+                    });
+                    break;
+
+                default:
+                    throw new Error(`Unknown storage type "${service.storage}"`);
+            }
+        }
+
+        this.config.unsetService(service.name);
         this.config.save();
     }
 
@@ -176,6 +247,10 @@ export class PgSqlService {
     }
 
     public async start(name?: string, restart?: boolean): Promise<void> {
+        if(!name && !this.config.default) {
+            await this.create();
+        }
+
         const service = this.config.getServiceOrDefault(name);
 
         if(restart) {
@@ -189,14 +264,34 @@ export class PgSqlService {
                 user = "root",
                 password = "root"
             } = service;
+            const volumes: string[] = [];
+
+            switch(service.storage) {
+                case STORAGE_VOLUME:
+                    if(!this.pluginConfigService.isVersionGTE("1.0.19")) {
+                        throw new Error("Please update wocker for using volume storage");
+                    }
+
+                    if(!await this.dockerService.hasVolume(service.volume)) {
+                        await this.dockerService.createVolume(service.volume);
+                    }
+
+                    volumes.push(`${service.volume}:/var/lib/postgresql/data`);
+                    break;
+
+                case STORAGE_FILESYSTEM:
+                    volumes.push(`${this.dbPath(service.name)}:/var/lib/postgresql/data`);
+                    break;
+
+                default:
+                    throw new Error(`Unknown storage type "${service.storage}"`);
+            }
 
             container = await this.dockerService.createContainer({
                 name: service.containerName,
                 image: service.imageTag,
                 restart: "always",
-                volumes: [
-                    `${this.dbPath(service.name)}:/var/lib/postgresql/data`
-                ],
+                volumes: volumes,
                 env: {
                     POSTGRES_USER: user,
                     POSTGRES_PASSWORD: password
@@ -344,7 +439,8 @@ export class PgSqlService {
                     ].join(";") + ";"
                 ],
                 volumes: [
-                    `${this.pluginConfigService.dataPath("servers.json")}:/pgadmin4/servers.json`
+                    "wocker-pgadmin:/var/lib/pgadmin",
+                    `${this.fs.path("servers.json")}:/pgadmin4/servers.json`
                 ],
                 env: {
                     VIRTUAL_HOST: this.adminContainerName,
