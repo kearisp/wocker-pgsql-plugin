@@ -84,12 +84,20 @@ export abstract class Config {
         if(!exists) {
             this.services.push(service);
         }
+
+        if(!this.default) {
+            this.default = service.name;
+        }
     }
 
     public unsetService(name: string): void {
         this.services = this.services.filter((service) => {
             return service.name !== name;
         });
+
+        if(this.default === name) {
+            delete this.default;
+        }
     }
 
     public abstract save(): void;

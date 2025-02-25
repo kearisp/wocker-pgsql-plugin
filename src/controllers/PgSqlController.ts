@@ -85,7 +85,7 @@ export class PgSqlController {
         host: string,
         @Option("port", {
             type: "number",
-            alias: "p",
+            alias: "P",
             description: "External port"
         })
         port: string,
@@ -146,9 +146,22 @@ export class PgSqlController {
     @Description("Destroys a specified PostgreSQL service.")
     protected async destroy(
         @Param("service")
-        service: string
+        service: string,
+        @Option("yes", {
+            type: "boolean",
+            alias: "y",
+            description: "Don't ask for confirmation"
+        })
+        yes?: boolean,
+        @Option("force", {
+            type: "boolean",
+            alias: "f",
+            description: "Force destroy the service"
+        })
+        force?: boolean
     ): Promise<void> {
-        await this.pgSqlService.destroy(service);
+        await this.pgSqlService.destroy(service, yes, force);
+        await this.pgSqlService.admin();
     }
 
     @Command("pgsql:ls")
