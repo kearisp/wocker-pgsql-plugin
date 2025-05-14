@@ -1,7 +1,6 @@
 import {AppConfigService, DockerService, FileSystem, Injectable, PluginConfigService, ProxyService} from "@wocker/core";
-import {promptConfirm, promptSelect, promptText} from "@wocker/utils";
+import {promptInput, promptConfirm, promptSelect} from "@wocker/utils";
 import CliTable from "cli-table3";
-
 import {Config, ConfigProps} from "../makes/Config";
 import {Service, ServiceProps, ServiceStorage, STORAGE_FILESYSTEM, STORAGE_VOLUME} from "../makes/Service";
 
@@ -20,11 +19,8 @@ export class PgSqlService {
 
     public get config(): Config {
         if(!this._config) {
-            const _this = this,
-                fs = this.fs,
-                data: ConfigProps = fs.exists("config.json")
-                    ? fs.readJSON("config.json")
-                    : {};
+            const fs = this.fs,
+                  data: ConfigProps = fs.exists("config.json") ? fs.readJSON("config.json") : {};
 
             this._config = new class extends Config {
                 public save(): void {
@@ -34,7 +30,7 @@ export class PgSqlService {
                         });
                     }
 
-                    fs.writeJSON(_this.configPath, this.toJSON());
+                    fs.writeJSON("config.json", this.toJSON());
                 }
             }(data)
         }
@@ -56,10 +52,6 @@ export class PgSqlService {
         return new FileSystem(this.appConfigService.dataPath("db/pgsql"));
     }
 
-    public get configPath(): string {
-        return "config.json";
-    }
-
     public dbPath(service: string): string {
         return this.appConfigService.dataPath("db/pgsql", service);
     }
@@ -68,17 +60,17 @@ export class PgSqlService {
         const config = this.config;
 
         if(!email) {
-            email = await promptText({
-                type: "string",
+            email = await promptInput({
                 message: "Email",
+                type: "text",
                 default: config.adminEmail || "root@pgsql.ws"
             });
         }
 
         if(!password) {
-            password = await promptText({
-                type: "string",
+            password = await promptInput({
                 message: "Password",
+                type: "text",
                 default: config.adminPassword || "toor"
             });
         }
@@ -104,8 +96,8 @@ export class PgSqlService {
         }
 
         if(!serviceProps.name) {
-            serviceProps.name = await promptText({
-                message: "Service name:",
+            serviceProps.name = await promptInput({
+                message: "Service name",
                 validate: (name?: string) => {
                     if(!name) {
                         return "Service name is required";
@@ -121,23 +113,23 @@ export class PgSqlService {
         }
 
         if(!serviceProps.user) {
-            serviceProps.user = await promptText({
-                message: "Database user:",
-                type: "string",
+            serviceProps.user = await promptInput({
+                message: "Database user",
+                type: "text",
                 required: true,
                 default: serviceProps.user
             });
         }
 
         if(!serviceProps.password) {
-            serviceProps.password = await promptText({
-                message: "Database password:",
+            serviceProps.password = await promptInput({
+                message: "Database password",
                 type: "password",
                 required: true,
             });
 
-            const confirmPassword = await promptText({
-                message: "Confirm password:",
+            const confirmPassword = await promptInput({
+                message: "Confirm password",
                 type: "password",
                 required: true
             });

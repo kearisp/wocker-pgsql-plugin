@@ -8,11 +8,11 @@ import {
     DockerService,
     Description
 } from "@wocker/core";
-
 import {PgSqlService} from "../services/PgSqlService";
 
 
 @Controller()
+@Description("PostgreSQL commands")
 export class PgSqlController {
     public constructor(
         protected readonly appConfigService: AppConfigService,
