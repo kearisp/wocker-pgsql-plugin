@@ -38,6 +38,10 @@ export class PgSqlService {
         return this._config;
     }
 
+    public get services(): Service[] {
+        return this.config.services;
+    }
+
     public get fs(): FileSystem {
         let fs = this.pluginConfigService.fs;
 
@@ -487,7 +491,7 @@ export class PgSqlService {
     }
 
     public async getServices(): Promise<string[]> {
-        return (this.config.services || []).map((service) => {
+        return this.services.map((service) => {
             return service.name;
         });
     }
