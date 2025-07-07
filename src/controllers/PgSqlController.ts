@@ -21,21 +21,13 @@ export class PgSqlController {
     ) {}
 
     @Command("pgsql:init")
+    @Description("Initializes PostgreSQL functionality and opens the admin interface. Optionally configures email and password.")
     protected async init(
-        @Option("email", {
-            type: "string",
-            alias: "e"
-        })
+        @Option("email", "e")
         email?: string,
-        @Option("password", {
-            type: "string",
-            alias: "p"
-        })
+        @Option("password", "p")
         password?: string,
-        @Option("skip-password", {
-            type: "boolean",
-            alias: "s"
-        })
+        @Option("skip-password", "s")
         skipPassword?: boolean
     ): Promise<void> {
         await this.pgSqlService.init(email, password, skipPassword);
@@ -65,41 +57,23 @@ export class PgSqlController {
     protected async create(
         @Param("service")
         name: string,
-        @Option("user", {
-            type: "string",
-            alias: "u",
-            description: "User name"
-        })
+        @Option("user", "u")
+        @Description("User name")
         user: string,
-        @Option("password", {
-            type: "string",
-            alias: "p",
-            description: "Password"
-        })
+        @Option("password", "p")
+        @Description("Password")
         password: string,
-        @Option("host", {
-            type: "string",
-            alias: "h",
-            description: "External host"
-        })
+        @Option("host", "h")
+        @Description("External host")
         host: string,
-        @Option("port", {
-            type: "number",
-            alias: "P",
-            description: "External port"
-        })
+        @Option("port", "P")
+        @Description("External port")
         port: string,
-        @Option("image", {
-            type: "string",
-            alias: "i",
-            description: "Image name"
-        })
+        @Option("image", "i")
+        @Description("Image name")
         imageName?: string,
-        @Option("image-version", {
-            type: "string",
-            alias: "I",
-            description: "Image version"
-        })
+        @Option("image-version", "I")
+        @Description("Image version")
         imageVersion?: string
     ): Promise<void> {
         await this.pgSqlService.create({
@@ -122,17 +96,11 @@ export class PgSqlController {
     protected async upgrade(
         @Param("service")
         name?: string,
-        @Option("image", {
-            type: "string",
-            alias: "i",
-            description: "Image name"
-        })
+        @Option("image", "i")
+        @Description("Image name")
         imageName?: string,
-        @Option("image-version", {
-            type: "string",
-            alias: "I",
-            description: "Image version"
-        })
+        @Option("image-version", "I")
+        @Description("Image version")
         imageVersion?: string
     ): Promise<void> {
         await this.pgSqlService.upgrade({
@@ -147,17 +115,11 @@ export class PgSqlController {
     protected async destroy(
         @Param("service")
         service: string,
-        @Option("yes", {
-            type: "boolean",
-            alias: "y",
-            description: "Don't ask for confirmation"
-        })
+        @Option("yes", "y")
+        @Description("Don't ask for confirmation")
         yes?: boolean,
-        @Option("force", {
-            type: "boolean",
-            alias: "f",
-            description: "Force destroy the service"
-        })
+        @Option("force", "f")
+        @Description("Force destroy the service")
         force?: boolean
     ): Promise<void> {
         await this.pgSqlService.destroy(service, yes, force);
@@ -175,11 +137,8 @@ export class PgSqlController {
     protected async start(
         @Param("service")
         service?: string,
-        @Option("restart", {
-            type: "boolean",
-            alias: "r",
-            description: "Restart the service if it's already running"
-        })
+        @Option("restart", "r")
+        @Description("Restart the service if it's already running")
         restart?: boolean
     ): Promise<void> {
         await this.pgSqlService.start(service, restart);
