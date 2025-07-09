@@ -74,7 +74,10 @@ export class PgSqlController {
         imageName?: string,
         @Option("image-version", "I")
         @Description("Image version")
-        imageVersion?: string
+        imageVersion?: string,
+        @Option("container-port")
+        @Description("Port on which the database container will be accessible on the host")
+        containerPort?: number
     ): Promise<void> {
         await this.pgSqlService.create({
             name,
@@ -83,7 +86,8 @@ export class PgSqlController {
             host,
             port,
             imageName,
-            imageVersion
+            imageVersion,
+            containerPort
         });
 
         if(host) {
@@ -101,12 +105,16 @@ export class PgSqlController {
         imageName?: string,
         @Option("image-version", "I")
         @Description("Image version")
-        imageVersion?: string
+        imageVersion?: string,
+        @Option("container-port")
+        @Description("Port on which the database container will be accessible on the host")
+        containerPort?: number
     ): Promise<void> {
         await this.pgSqlService.upgrade({
             name,
             imageName,
-            imageVersion
+            imageVersion,
+            containerPort
         });
     }
 

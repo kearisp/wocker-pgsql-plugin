@@ -14,6 +14,7 @@ export type ServiceProps = {
     imageVersion?: string;
     storage?: ServiceStorage;
     volume?: string;
+    containerPort?: number;
 };
 
 export class Service {
@@ -26,6 +27,7 @@ export class Service {
     public imageVersion?: string;
     public storage?: ServiceStorage;
     public _volume?: string;
+    public containerPort?: number;
 
     public constructor(data: ServiceProps) {
         const {
@@ -39,6 +41,7 @@ export class Service {
             image,
             imageName = image,
             imageVersion,
+            containerPort
         } = data;
 
         this.name = name;
@@ -50,6 +53,7 @@ export class Service {
         this._volume = volume;
         this.imageName = imageName;
         this.imageVersion = imageVersion;
+        this.containerPort = containerPort;
     }
 
     public get containerName(): string {
@@ -93,7 +97,8 @@ export class Service {
             imageName: this.imageName,
             imageVersion: this.imageVersion,
             storage: this.storage,
-            volume: this._volume
+            volume: this._volume,
+            containerPort: this.containerPort
         };
     }
 }
