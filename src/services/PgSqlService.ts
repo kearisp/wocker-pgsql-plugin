@@ -150,6 +150,23 @@ export class PgSqlService {
             });
         }
 
+        if(!serviceProps.containerPort) {
+            const needPort = await promptConfirm({
+                message: "Do you need to expose container port?",
+                default: false
+            });
+
+            if(needPort) {
+                serviceProps.containerPort = await promptInput({
+                    required: true,
+                    message: "Container port:",
+                    type: "number",
+                    min: 1,
+                    default: 5432
+                });
+            }
+        }
+
         this.config.setService(new Service(serviceProps as ServiceProps));
         this.config.save();
     }
@@ -165,6 +182,11 @@ export class PgSqlService {
 
         if(serviceProps.imageVersion) {
             service.imageVersion = serviceProps.imageVersion;
+            changed = true;
+        }
+
+        if(serviceProps.containerPort) {
+            service.containerPort = serviceProps.containerPort;
             changed = true;
         }
 
@@ -291,7 +313,10 @@ export class PgSqlService {
                 env: {
                     POSTGRES_USER: user,
                     POSTGRES_PASSWORD: password
-                }
+                },
+                ports: service.containerPort
+                    ? [`${service.containerPort}:5432`]
+                    : undefined
             });
         }
 
