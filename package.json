@@ -1,6 +1,6 @@
 {
     "name": "@wocker/pgsql-plugin",
-    "version": "1.0.14",
+    "version": "1.0.15",
     "author": "Kris Papercut <krispcut@gmail.com>",
     "description": "PostgreSQL plugin for wocker",
     "license": "MIT",
