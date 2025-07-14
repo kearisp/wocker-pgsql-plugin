@@ -23,6 +23,10 @@ export class PgSqlController {
     @Command("pgsql:init")
     @Description("Initializes PostgreSQL functionality and opens the admin interface. Optionally configures email and password.")
     protected async init(
+        @Option("admin-enabled")
+        adminEnabled?: boolean,
+        @Option("admin-disabled")
+        adminDisabled?: boolean,
         @Option("email", "e")
         email?: string,
         @Option("password", "p")
@@ -30,7 +34,12 @@ export class PgSqlController {
         @Option("skip-password", "s")
         skipPassword?: boolean
     ): Promise<void> {
-        await this.pgSqlService.init(email, password, skipPassword);
+        await this.pgSqlService.init({
+            enabled: adminEnabled === true ? true : adminDisabled === true ? false : undefined,
+            email,
+            password,
+            skipPassword
+        });
         await this.pgSqlService.admin();
     }
 

@@ -1,7 +1,7 @@
 import {AppConfigService, DockerService, FileSystem, Injectable, PluginConfigService, ProxyService} from "@wocker/core";
 import {promptInput, promptConfirm, promptSelect} from "@wocker/utils";
 import CliTable from "cli-table3";
-import {Config, ConfigProps} from "../makes/Config";
+import {Config, AdminConfig, ConfigProps} from "../makes/Config";
 import {Service, ServiceProps, ServiceStorage, STORAGE_FILESYSTEM, STORAGE_VOLUME} from "../makes/Service";
 
 
@@ -60,37 +60,51 @@ export class PgSqlService {
         return this.appConfigService.dataPath("db/pgsql", service);
     }
 
-    public async init(email?: string, password?: string, skipPassword?: boolean): Promise<void> {
-        const config = this.config;
-
-        if(!email) {
-            email = await promptInput({
-                message: "Email",
-                type: "text",
-                default: config.adminEmail || "root@pgsql.ws"
+    public async init(admin: Partial<AdminConfig>): Promise<void> {
+        if(typeof admin.enabled === "undefined") {
+            admin.enabled = await promptConfirm({
+                message: "Enable admin?"
             });
         }
-
-        if(!password) {
-            password = await promptInput({
-                message: "Password",
-                type: "text",
-                default: config.adminPassword || "toor"
-            });
+        else {
+            this.config.admin.enabled = admin.enabled;
         }
 
-        if(typeof skipPassword === "undefined") {
-            skipPassword = await promptConfirm({
-                message: "Skip password",
-                default: config.adminSkipPassword
-            });
+        if(this.config.admin.enabled) {
+            if(!admin.email) {
+                this.config.admin.email = await promptInput({
+                    message: "Email",
+                    type: "text",
+                    default: this.config.admin.email || "root@pgsql.ws"
+                });
+            }
+            else {
+                this.config.admin.email = admin.email;
+            }
+
+            if(!admin.password) {
+                this.config.admin.password = await promptInput({
+                    message: "Password",
+                    type: "text",
+                    default: this.config.admin.password || "toor"
+                });
+            }
+            else {
+                this.config.admin.password = admin.password;
+            }
+
+            if(typeof admin.skipPassword === "undefined") {
+                this.config.admin.skipPassword = await promptConfirm({
+                    message: "Skip password",
+                    default: this.config.admin.skipPassword
+                });
+            }
+            else {
+                this.config.admin.skipPassword = admin.skipPassword;
+            }
         }
 
-        config.adminEmail = email;
-        config.adminPassword = password;
-        config.adminSkipPassword = skipPassword;
-
-        config.save();
+        this.config.save();
     }
 
     public async create(serviceProps: Partial<ServiceProps> = {}): Promise<void> {
@@ -371,7 +385,7 @@ export class PgSqlService {
     public async admin(): Promise<void> {
         const config = this.config;
 
-        if(!config.adminEmail || !config.adminPassword) {
+        if(!config.admin.email || !config.admin.password) {
             console.info("Can't start admin credentials missed");
             return;
         }
@@ -426,7 +440,7 @@ export class PgSqlService {
 
         await this.dockerService.removeContainer(this.adminContainerName);
 
-        if(servers.length === 0) {
+        if(!this.config.admin.enabled || servers.length === 0) {
             return;
         }
 
@@ -465,9 +479,9 @@ export class PgSqlService {
                 ],
                 env: {
                     VIRTUAL_HOST: this.adminContainerName,
-                    PGADMIN_DEFAULT_EMAIL: config.adminEmail || "",
-                    PGADMIN_DEFAULT_PASSWORD: config.adminPassword || "",
-                    ...config.adminSkipPassword ? {
+                    PGADMIN_DEFAULT_EMAIL: config.admin.email || "",
+                    PGADMIN_DEFAULT_PASSWORD: config.admin.password || "",
+                    ...config.admin.skipPassword ? {
                         PGADMIN_CONFIG_SERVER_MODE: "False",
                         PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
                     } : {}
@@ -494,8 +508,8 @@ export class PgSqlService {
 
         console.info(`Admin started at ${this.adminContainerName}`);
 
-        if(!config.adminSkipPassword) {
-            console.info(`Login: ${config.adminEmail}`);
+        if(!config.admin.skipPassword) {
+            console.info(`Login: ${config.admin.email}`);
             console.info(`Password: ****`);
         }
         else {
