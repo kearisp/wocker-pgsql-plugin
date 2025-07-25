@@ -2,6 +2,12 @@
 
 ###### Docker workspace for web projects
 
+[![npm version](https://img.shields.io/npm/v/@wocker/pgsql-plugin.svg)](https://www.npmjs.com/package/@wocker/pgsql-plugin)
+[![Publish](https://github.com/kearisp/wocker-pgsql-plugin/actions/workflows/publish-latest.yml/badge.svg?event=release)](https://github.com/kearisp/wocker-pgsql-plugin/actions/workflows/publish-latest.yml)
+[![License](https://img.shields.io/npm/l/@wocker/pgsql-plugin)](https://github.com/kearisp/wocker-pgsql-plugin/blob/main/LICENSE)
+
+[![npm total downloads](https://img.shields.io/npm/dt/@wocker/pgsql-plugin.svg)](https://www.npmjs.com/package/@wocker/pgsql-plugin)
+
 ## Installation
 
 **Note:** It is recommended to install Wocker globally to ensure accessibility from any directory in your terminal.
@@ -11,7 +17,7 @@ npm i -g @wocker/ws
 ```
 
 ```shell
-ws plugin:add pgsql
+ws plugin:install pgsql
 ```
 
 

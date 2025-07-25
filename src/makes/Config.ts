@@ -2,33 +2,53 @@ import {PickProperties} from "@wocker/core";
 import {Service, ServiceProps} from "./Service";
 
 
-export type ConfigProps = Omit<PickProperties<Config>, "services"> & {
+export type AdminConfig = {
+    enabled: boolean;
+    host?: string;
+    email?: string;
+    password?: string;
+    skipPassword?: boolean;
+};
+
+export type ConfigProps = Omit<PickProperties<Config>, "admin" | "services"> & {
+    /** @deprecated */
+    adminHost?: string;
+    /** @deprecated */
+    adminEmail?: string;
+    /** @deprecated */
+    adminPassword?: string;
+    /** @deprecated */
+    adminSkipPassword?: boolean;
+    admin?: AdminConfig;
     services?: ServiceProps[];
 };
 
 export abstract class Config {
     public default?: string;
-    public adminHost?: string;
-    public adminEmail?: string;
-    public adminPassword?: string;
-    public adminSkipPassword?: boolean;
+    public admin: AdminConfig;
     public services: Service[];
 
     public constructor(data?: ConfigProps) {
         const {
-            adminHost,
-            adminEmail,
-            adminPassword,
-            adminSkipPassword,
             default: defaultService,
+            admin: {
+                enabled: adminEnabled = true,
+                host: adminHost = data?.adminHost,
+                email: adminEmail = data?.adminEmail,
+                password: adminPassword = data?.adminPassword,
+                skipPassword: adminSkipPassword = data?.adminSkipPassword
+            } = {},
             services = []
         } = data || {};
 
-        this.adminHost = adminHost;
-        this.adminEmail = adminEmail;
-        this.adminPassword = adminPassword;
-        this.adminSkipPassword = adminSkipPassword;
         this.default = defaultService;
+        this.admin = {
+            enabled: adminEnabled,
+            host: adminHost,
+            email: adminEmail,
+            password: adminPassword,
+            skipPassword: adminSkipPassword
+        };
         this.services = services.map((s) => {
             return new Service(s);
         });
@@ -103,11 +123,8 @@ export abstract class Config {
 
     public toJSON(): ConfigProps {
         return {
-            adminHost: this.adminHost,
-            adminEmail: this.adminEmail,
-            adminPassword: this.adminPassword,
-            adminSkipPassword: this.adminSkipPassword,
             default: this.default,
+            admin: this.admin,
             services: this.services.length > 0 ? this.services.map((service) => {
                 return service.toObject();
             }) : undefined
