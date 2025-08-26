@@ -1,7 +1,7 @@
 import {AppConfigService, DockerService, FileSystem, Injectable, PluginConfigService, ProxyService} from "@wocker/core";
 import {promptInput, promptConfirm, promptSelect} from "@wocker/utils";
 import CliTable from "cli-table3";
-import {Config, AdminConfig, ConfigProps} from "../makes/Config";
+import {Config, AdminConfig} from "../makes/Config";
 import {Service, ServiceProps, ServiceStorage, STORAGE_FILESYSTEM, STORAGE_VOLUME} from "../makes/Service";
 
 
@@ -19,20 +19,7 @@ export class PgSqlService {
 
     public get config(): Config {
         if(!this._config) {
-            const fs = this.fs,
-                  data: ConfigProps = fs.exists("config.json") ? fs.readJSON("config.json") : {};
-
-            this._config = new class extends Config {
-                public save(): void {
-                    if(!fs.exists("")) {
-                        fs.mkdir("", {
-                            recursive: true
-                        });
-                    }
-
-                    fs.writeJSON("config.json", this.toJSON());
-                }
-            }(data)
+            this._config = Config.make(this.fs);
         }
 
         return this._config;
