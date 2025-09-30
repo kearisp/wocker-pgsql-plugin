@@ -181,7 +181,11 @@ export class PgSqlController {
         await this.pgSqlService.setDefault(service);
     }
 
-    @Completion("service")
+    @Completion("service", "pgsql:destroy <service>")
+    @Completion("service", "pgsql:start [service]")
+    @Completion("service", "pgsql:stop [service]")
+    @Completion("service", "pgsql:upgrade [service]")
+    @Completion("service", "pgsql:use <service>")
     public async getServices(): Promise<string[]> {
         return this.pgSqlService.getServices();
     }

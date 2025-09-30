@@ -252,13 +252,15 @@ export class PgSqlService {
 
     public async listTable(): Promise<string> {
         const table = new CliTable({
-            head: ["Name", "Host"]
+            head: ["Name", "Image", "Host", "Volume"]
         });
 
         for(const service of this.config.services) {
             table.push([
                 service.name + (this.config.default === service.name ? " (default)" : ""),
-                service.host || service.containerName
+                service.image,
+                service.host || service.containerName,
+                service.storage === "volume" ? service.volume : undefined
             ]);
         }
 
@@ -308,7 +310,7 @@ export class PgSqlService {
 
             container = await this.dockerService.createContainer({
                 name: service.containerName,
-                image: service.imageTag,
+                image: service.image,
                 restart: "always",
                 volumes: volumes,
                 env: {
