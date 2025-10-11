@@ -4,7 +4,7 @@
 
 [![npm version](https://img.shields.io/npm/v/@wocker/pgsql-plugin.svg)](https://www.npmjs.com/package/@wocker/pgsql-plugin)
 [![Publish](https://github.com/kearisp/wocker-pgsql-plugin/actions/workflows/publish-latest.yml/badge.svg?event=release)](https://github.com/kearisp/wocker-pgsql-plugin/actions/workflows/publish-latest.yml)
-[![License](https://img.shields.io/npm/l/@wocker/pgsql-plugin)](https://github.com/kearisp/wocker-pgsql-plugin/blob/main/LICENSE)
+[![License](https://img.shields.io/npm/l/@wocker/pgsql-plugin)](https://github.com/kearisp/wocker-pgsql-plugin/blob/master/LICENSE)
 
 [![npm total downloads](https://img.shields.io/npm/dt/@wocker/pgsql-plugin.svg)](https://www.npmjs.com/package/@wocker/pgsql-plugin)
 

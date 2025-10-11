@@ -23,8 +23,9 @@ export class Service {
     public password?: string;
     public host?: string;
     public port?: string | number;
-    public imageName?: string;
-    public imageVersion?: string;
+    public _image?: string;
+    public _imageName?: string;
+    public _imageVersion?: string;
     public storage?: ServiceStorage;
     public _volume?: string;
     public containerPort?: number;
@@ -36,12 +37,12 @@ export class Service {
             port,
             user,
             password,
-            storage = STORAGE_FILESYSTEM,
-            volume,
             image,
-            imageName = image,
+            imageName,
             imageVersion,
-            containerPort
+            containerPort,
+            storage = STORAGE_FILESYSTEM,
+            volume
         } = data;
 
         this.name = name;
@@ -49,20 +50,33 @@ export class Service {
         this.port = port;
         this.user = user;
         this.password = password;
+        this._image = image;
+        this._imageName = imageName;
+        this._imageVersion = imageVersion;
+        this.containerPort = containerPort;
         this.storage = storage;
         this._volume = volume;
-        this.imageName = imageName;
-        this.imageVersion = imageVersion;
-        this.containerPort = containerPort;
     }
 
     public get containerName(): string {
         return `pgsql-${this.name}.ws`;
     }
 
+    public get image(): string {
+        if(!this._image) {
+            return this.imageTag;
+        }
+
+        return this._image;
+    }
+
+    public set image(image: string) {
+        this._image = image;
+    }
+
     public get imageTag(): string {
-        let imageName = this.imageName,
-            imageVersion = this.imageVersion;
+        let imageName = this._imageName,
+            imageVersion = this._imageVersion;
 
         if(!imageName) {
             imageName = "postgres";
@@ -73,6 +87,18 @@ export class Service {
         }
 
         return `${imageName}:${imageVersion}`;
+    }
+
+    public set imageName(imageName: string) {
+        const [, imageVersion] = this.image.split(":");
+
+        this._image = !imageVersion ? imageName : `${imageName}:${imageVersion}`;
+    }
+
+    public set imageVersion(imageVersion: string) {
+        const [imageName] = this.image.split(":");
+
+        this._image = `${imageName}:${imageVersion}`;
     }
 
     public get volume(): string {
@@ -94,11 +120,10 @@ export class Service {
             port: this.port,
             user: this.user,
             password: this.password,
-            imageName: this.imageName,
-            imageVersion: this.imageVersion,
+            image: this.image,
+            containerPort: this.containerPort,
             storage: this.storage,
-            volume: this._volume,
-            containerPort: this.containerPort
+            volume: this._volume
         };
     }
 }
