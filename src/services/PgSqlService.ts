@@ -1,6 +1,9 @@
 import {AppConfigService, DockerService, FileSystem, Injectable, PluginConfigService, ProxyService} from "@wocker/core";
 import {promptInput, promptConfirm, promptSelect} from "@wocker/utils";
 import CliTable from "cli-table3";
+import CSVParser from "csv-parser";
+import {Writable} from "stream";
+import {format as dateFormat} from "date-fns/format";
 import {Config, AdminConfig} from "../makes/Config";
 import {Service, ServiceProps, ServiceStorage, STORAGE_FILESYSTEM, STORAGE_VOLUME} from "../makes/Service";
 
@@ -41,6 +44,43 @@ export class PgSqlService {
 
     public get dbFs(): FileSystem {
         return new FileSystem(this.appConfigService.dataPath("db/pgsql"));
+    }
+
+    protected async query<T = unknown>(service: Service, query: string): Promise<T[]> {
+        if(service.isExternal) {
+            throw new Error("Unsupported for external service");
+        }
+
+        const container = await this.dockerService.getContainer(service.containerName);
+
+        if(!container) {
+            throw new Error("Service is not running");
+        }
+
+        const exec = await container.exec({
+            Cmd: ["psql", ...service.auth, "--csv", "-c", query],
+            AttachStdout: true,
+            AttachStderr: true
+        });
+
+        const stream = await exec.start({
+            hijack: true,
+            Tty: true
+        });
+
+        return new Promise<T[]>((resolve, reject) => {
+            const results: T[] = [];
+
+            stream
+                .pipe(CSVParser())
+                .on("data", (data) => {
+                    results.push(data);
+                })
+                .on("end", () => {
+                    resolve(results);
+                })
+                .on("error", reject);
+        });
     }
 
     public dbPath(service: string): string {
@@ -95,20 +135,16 @@ export class PgSqlService {
     }
 
     public async create(serviceProps: Partial<ServiceProps> = {}): Promise<void> {
-        if(serviceProps.name && this.config.hasService(serviceProps.name)) {
-            console.info(`Service "${serviceProps.name}" is already exists`);
-            delete serviceProps.name;
-        }
-
-        if(!serviceProps.name) {
+        if(!serviceProps.name || this.config.hasService(serviceProps.name)) {
             serviceProps.name = await promptInput({
                 message: "Service name",
+                default: serviceProps.name || "default",
                 validate: (name?: string) => {
                     if(!name) {
                         return "Service name is required";
                     }
 
-                    if(this.config.getService(name)) {
+                    if(this.config.hasService(name)) {
                         return `Service "${name}" is already exists`;
                     }
 
@@ -122,25 +158,27 @@ export class PgSqlService {
                 message: "Database user",
                 type: "text",
                 required: true,
-                default: serviceProps.user
+                default: "root"
             });
         }
 
-        if(!serviceProps.password) {
+        while(!serviceProps.password) {
             serviceProps.password = await promptInput({
-                message: "Database password",
                 type: "password",
                 required: true,
+                message: "Database password",
+                minLength: 4
             });
 
             const confirmPassword = await promptInput({
-                message: "Confirm password",
                 type: "password",
-                required: true
+                required: true,
+                message: "Confirm password"
             });
 
             if(serviceProps.password !== confirmPassword) {
-                throw new Error("Passwords do not match");
+                console.error("Passwords do not match");
+                delete serviceProps.password;
             }
         }
 
@@ -252,7 +290,7 @@ export class PgSqlService {
 
     public async listTable(): Promise<string> {
         const table = new CliTable({
-            head: ["Name", "Image", "Host", "Volume"]
+            head: ["Name", "Image", "Host/Container", "Expose port", "Volume"]
         });
 
         for(const service of this.config.services) {
@@ -260,6 +298,7 @@ export class PgSqlService {
                 service.name + (this.config.default === service.name ? " (default)" : ""),
                 service.image,
                 service.host || service.containerName,
+                service.containerPort,
                 service.storage === "volume" ? service.volume : undefined
             ]);
         }
@@ -357,18 +396,169 @@ export class PgSqlService {
         });
     }
 
-    public async dump(name?: string): Promise<void> {
+    public async dump(name?: string, database?: string): Promise<void> {
         const service = this.config.getServiceOrDefault(name);
+
         const container = await this.dockerService.getContainer(service.containerName);
 
         if(!container) {
             throw new Error(`Service "${service.name}" isn't started`);
         }
 
+        if(!database) {
+            const res = await this.query<{datname: string}>(service, "SELECT datname FROM pg_database;");
+
+            database = await promptSelect({
+                required: true,
+                options: res.map((r) => r.datname),
+            });
+        }
+
         await this.dockerService.exec(service.containerName, {
             tty: true,
-            cmd: ["pg_dump"]
+            cmd: ["pg_dump", ...service.auth, "-d", database]
         });
+    }
+
+    public async backup(name?: string, database?: string, filename?: string): Promise<void> {
+        const service = this.config.getServiceOrDefault(name);
+
+        if(!database) {
+            const res = await this.query<{datname: string}>(service, "SELECT datname FROM pg_database;");
+
+            database = await promptSelect({
+                message: "Database",
+                required: true,
+                options: res.map((r) => r.datname),
+            });
+        }
+
+        if(!filename) {
+            const date = dateFormat(new Date(), "yyyy-MM-dd HH-mm");
+
+            filename = await promptInput({
+                message: "File name",
+                required: true,
+                suffix: ".sql",
+                default: date
+            });
+
+            filename += ".sql";
+        }
+
+        if(!this.fs.exists(`dump/${service.name}/${database}`)) {
+            this.fs.mkdir(`dump/${service.name}/${database}`, {
+                recursive: true
+            });
+        }
+
+        const container = await this.dockerService.getContainer(service.containerName);
+
+        if(!container) {
+            throw new Error(`Service "${service.name}" isn't started`);
+        }
+
+        const file = this.fs.createWriteStream(`dump/${service.name}/${database}/${filename}`);
+        const exec = await container.exec({
+            Cmd: ["pg_dump", "--set", "ON_ERROR_STOP=on", ...service.auth, "--if-exists", "-c", "-d", database],
+            AttachStdout: true,
+            AttachStderr: true
+        });
+        const stream = await exec.start({
+            hijack: true
+        });
+
+        await new Promise<void>((resolve, reject) => {
+            container.modem.demuxStream(stream, new Writable({write: () => undefined}), process.stderr);
+
+            stream
+                .pipe(file)
+                .on("finish", resolve)
+                .on("error", reject);
+        });
+
+        console.info("Backup created");
+    }
+
+    public async deleteBackup(name?: string, database?: string, filename?: string): Promise<void> {
+        const service = this.config.getServiceOrDefault(name);
+
+        if(!database) {
+            database = await promptSelect({
+                required: true,
+                options: this.fs.readdir(`dump/${service.name}`)
+            });
+        }
+
+        if(!filename) {
+            filename = await promptSelect({
+                required: true,
+                options: this.fs.readdir(`dump/${service.name}/${database}`)
+            });
+        }
+    }
+
+    public async restore(name?: string, database?: string, filename?: string): Promise<void> {
+        const service = this.config.getServiceOrDefault(name);
+
+        if(service.isExternal) {
+            throw new Error("Unsupported for external service");
+        }
+
+        if(!database) {
+            database = await promptSelect({
+                message: "Database",
+                required: true,
+                options: this.fs.readdir(`dump/${service.name}`)
+            });
+        }
+
+        if(!filename) {
+            filename = await promptSelect({
+                message: "File name",
+                required: true,
+                options: this.fs.readdir(`dump/${service.name}/${database}`)
+            });
+        }
+
+        const container = await this.dockerService.getContainer(service.containerName);
+
+        if(!container) {
+            throw new Error(`Service "${service.name}" isn't started`);
+        }
+
+        const file = this.fs.createReadStream(`dump/${service.name}/${database}/${filename}`);
+        const exec = await container.exec({
+            Cmd: ["psql", "--set", "ON_ERROR_STOP=on", ...service.auth, "-d", database],
+            AttachStdin: true,
+            AttachStdout: true,
+            AttachStderr: true
+        });
+
+        const stream = await exec.start({
+            stdin: true,
+            hijack: true
+        });
+
+        await new Promise<void>((resolve, reject) => {
+            container.modem.demuxStream(stream, new Writable({write: () => undefined}), process.stderr);
+
+            file
+                .pipe(stream)
+                .on("error", reject);
+
+            stream
+                .on("end", resolve)
+                .on("error", reject);
+        });
+
+        const info = await exec.inspect();
+
+        if(info.ExitCode !== 0) {
+            throw new Error(`Restore failed with exit code ${info.ExitCode}`);
+        }
+
+        console.info("Restored");
     }
 
     public async admin(): Promise<void> {
