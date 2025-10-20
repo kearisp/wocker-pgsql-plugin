@@ -68,12 +68,12 @@ export class PgSqlService {
             Tty: true
         });
 
-        return new Promise<T[]>((resolve, reject) => {
+        return new Promise<T[]>((resolve, reject): void => {
             const results: T[] = [];
 
             stream
                 .pipe(CSVParser())
-                .on("data", (data) => {
+                .on("data", (data: T) => {
                     results.push(data);
                 })
                 .on("end", () => {
