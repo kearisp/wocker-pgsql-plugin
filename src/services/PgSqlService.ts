@@ -460,7 +460,7 @@ export class PgSqlService {
 
         const file = this.fs.createWriteStream(`dump/${service.name}/${database}/${filename}`);
         const exec = await container.exec({
-            Cmd: ["pg_dump", "--set", "ON_ERROR_STOP=on", ...service.auth, "--if-exists", "-c", "-d", database],
+            Cmd: ["pg_dump", ...service.auth, "--if-exists", "--no-comments", "-c", "-d", database],
             AttachStdout: true,
             AttachStderr: true
         });
@@ -469,10 +469,9 @@ export class PgSqlService {
         });
 
         await new Promise<void>((resolve, reject) => {
-            container.modem.demuxStream(stream, new Writable({write: () => undefined}), process.stderr);
+            container.modem.demuxStream(stream, file, process.stderr);
 
             stream
-                .pipe(file)
                 .on("finish", resolve)
                 .on("error", reject);
         });
