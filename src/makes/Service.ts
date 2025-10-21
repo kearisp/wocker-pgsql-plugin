@@ -58,13 +58,46 @@ export class Service {
         this._volume = volume;
     }
 
+    public get isExternal(): boolean {
+        return !!this.host;
+    }
+
+    public get auth(): string[] {
+        const cmd: string[] = [];
+
+        if(!this.isExternal) {
+            if(this.user) {
+                cmd.push("-U");
+                cmd.push(this.user);
+            }
+
+            // if(this.password) {
+            //     cmd.push("--password");
+            //     cmd.push(this.password);
+            // }
+        }
+
+        return cmd;
+    }
+
     public get containerName(): string {
         return `pgsql-${this.name}.ws`;
     }
 
     public get image(): string {
         if(!this._image) {
-            return this.imageTag;
+            let imageName = this._imageName,
+                imageVersion = this._imageVersion;
+
+            if(!imageName) {
+                imageName = "postgres";
+            }
+
+            if(!imageVersion) {
+                return imageName;
+            }
+
+            return `${imageName}:${imageVersion}`;
         }
 
         return this._image;
@@ -72,21 +105,6 @@ export class Service {
 
     public set image(image: string) {
         this._image = image;
-    }
-
-    public get imageTag(): string {
-        let imageName = this._imageName,
-            imageVersion = this._imageVersion;
-
-        if(!imageName) {
-            imageName = "postgres";
-        }
-
-        if(!imageVersion) {
-            return imageName;
-        }
-
-        return `${imageName}:${imageVersion}`;
     }
 
     public set imageName(imageName: string) {

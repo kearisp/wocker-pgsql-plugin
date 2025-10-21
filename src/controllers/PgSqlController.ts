@@ -61,7 +61,7 @@ export class PgSqlController {
         await this.pgSqlService.dump(name);
     }
 
-    @Command("pgsql:create <service>")
+    @Command("pgsql:create [service]")
     @Description("Creates a PostgreSQL service with configurable user, password, host, and port options.")
     protected async create(
         @Param("service")
@@ -179,6 +179,32 @@ export class PgSqlController {
         service: string
     ): Promise<void> {
         await this.pgSqlService.setDefault(service);
+    }
+
+    @Command("pgsql:backup [service]")
+    public async backup(
+        @Param("service")
+        service?: string,
+        @Option("database", "d")
+        database?: string,
+        @Option("filename", "f")
+        filename?: string,
+        @Option("delete", "D")
+        del?: boolean
+    ): Promise<void> {
+        await this.pgSqlService.backup(service, database, filename);
+    }
+
+    @Command("pgsql:restore [service]")
+    public async restore(
+        @Param("service")
+        service?: string,
+        @Option("database", "d")
+        database?: string,
+        @Option("filename", "f")
+        filename?: string
+    ): Promise<void> {
+        await this.pgSqlService.restore(service, database, filename);
     }
 
     @Completion("service", "pgsql:destroy <service>")
