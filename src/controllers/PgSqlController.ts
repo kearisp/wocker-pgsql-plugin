@@ -192,7 +192,11 @@ export class PgSqlController {
         @Option("delete", "D")
         del?: boolean
     ): Promise<void> {
-        await this.pgSqlService.backup(service, database, filename);
+        if(del) {
+            return this.pgSqlService.deleteBackup(service, database, filename);
+        }
+
+        return await this.pgSqlService.backup(service, database, filename);
     }
 
     @Command("pgsql:restore [service]")
