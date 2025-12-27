@@ -65,16 +65,18 @@ export class Service {
     public get auth(): string[] {
         const cmd: string[] = [];
 
-        if(!this.isExternal) {
-            if(this.user) {
-                cmd.push("-U");
-                cmd.push(this.user);
+        if(this.user) {
+            cmd.push("-U", this.user);
+        }
+
+        if(this.isExternal) {
+            if(this.host) {
+                cmd.push("--host", this.host);
             }
 
-            // if(this.password) {
-            //     cmd.push("--password");
-            //     cmd.push(this.password);
-            // }
+            if(this.port) {
+                cmd.push("--port", `${this.port}`);
+            }
         }
 
         return cmd;

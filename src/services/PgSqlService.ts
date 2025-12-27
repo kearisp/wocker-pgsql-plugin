@@ -1,11 +1,22 @@
-import {AppConfigService, DockerService, FileSystem, Injectable, PluginConfigService, ProxyService} from "@wocker/core";
+import {
+    AppConfigService,
+    DockerService,
+    FileSystem,
+    Injectable,
+    PluginConfigService,
+    ProxyService,
+    LogService
+} from "@wocker/core";
 import {promptInput, promptConfirm, promptSelect} from "@wocker/utils";
+import {drizzle} from "drizzle-orm/node-postgres";
+import {drizzle as drizzleProxy} from "drizzle-orm/pg-proxy";
 import CliTable from "cli-table3";
 import CSVParser from "csv-parser";
 import {Writable} from "stream";
 import {format as dateFormat} from "date-fns/format";
 import {Config, AdminConfig} from "../makes/Config";
 import {Service, ServiceProps, ServiceStorage, STORAGE_FILESYSTEM, STORAGE_VOLUME} from "../makes/Service";
+import {PgDatabaseTable} from "../table/PgDatabaseTable";
 
 
 @Injectable()
@@ -17,7 +28,8 @@ export class PgSqlService {
         protected readonly appConfigService: AppConfigService,
         protected readonly pluginConfigService: PluginConfigService,
         protected readonly dockerService: DockerService,
-        protected readonly proxyService: ProxyService
+        protected readonly proxyService: ProxyService,
+        protected readonly logService: LogService
     ) {}
 
     public get config(): Config {
@@ -46,7 +58,7 @@ export class PgSqlService {
         return new FileSystem(this.appConfigService.dataPath("db/pgsql"));
     }
 
-    protected async query<T = unknown>(service: Service, query: string): Promise<T[]> {
+    public async query<T = unknown>(service: Service, query: string, headers?: boolean): Promise<T[]> {
         if(service.isExternal) {
             throw new Error("Unsupported for external service");
         }
@@ -59,6 +71,9 @@ export class PgSqlService {
 
         const exec = await container.exec({
             Cmd: ["psql", ...service.auth, "--csv", "-c", query],
+            Env: [
+                `PGPASSWORD=${service.password}`
+            ],
             AttachStdout: true,
             AttachStderr: true
         });
@@ -72,7 +87,9 @@ export class PgSqlService {
             const results: T[] = [];
 
             stream
-                .pipe(CSVParser())
+                .pipe(CSVParser({
+                    headers
+                }))
                 .on("data", (data: T) => {
                     results.push(data);
                 })
@@ -81,6 +98,37 @@ export class PgSqlService {
                 })
                 .on("error", reject);
         });
+    }
+
+    public getServiceDatabase(service: Service) {
+        if(service.isExternal && service.host) {
+            const url = `postgresql://${service.user}:${service.password}@${service.host}:${service.port}`;
+
+            this.logService.info(url);
+
+            return drizzle(url);
+        }
+
+        return drizzleProxy(async (sql, params, method) => {
+            this.logService.debug("pgsql query", {
+                sql,
+                params,
+                method
+            });
+
+            return {
+                rows: await this.query<any>(service, sql, false)
+            };
+        });
+    }
+
+    public async getTables(service: Service) {
+        return this.getServiceDatabase(service)
+            .select({
+                table: PgDatabaseTable.datname
+            })
+            .from(PgDatabaseTable)
+            .execute();
     }
 
     public dbPath(service: string): string {
@@ -182,27 +230,29 @@ export class PgSqlService {
             }
         }
 
-        if(!serviceProps.storage || ![STORAGE_VOLUME, STORAGE_FILESYSTEM].includes(serviceProps.storage)) {
-            serviceProps.storage = await promptSelect<ServiceStorage>({
-                message: "Storage:",
-                options: [STORAGE_VOLUME, STORAGE_FILESYSTEM]
-            });
-        }
-
-        if(!serviceProps.containerPort) {
-            const needPort = await promptConfirm({
-                message: "Do you need to expose container port?",
-                default: false
-            });
-
-            if(needPort) {
-                serviceProps.containerPort = await promptInput({
-                    required: true,
-                    message: "Container port:",
-                    type: "number",
-                    min: 1,
-                    default: 5432
+        if(!serviceProps.host) {
+            if(!serviceProps.storage || ![STORAGE_VOLUME, STORAGE_FILESYSTEM].includes(serviceProps.storage)) {
+                serviceProps.storage = await promptSelect<ServiceStorage>({
+                    message: "Storage:",
+                    options: [STORAGE_VOLUME, STORAGE_FILESYSTEM]
                 });
+            }
+
+            if(!serviceProps.containerPort) {
+                const needPort = await promptConfirm({
+                    message: "Do you need to expose container port?",
+                    default: false
+                });
+
+                if(needPort) {
+                    serviceProps.containerPort = await promptInput({
+                        required: true,
+                        message: "Container port:",
+                        type: "number",
+                        min: 1,
+                        default: 5432
+                    });
+                }
             }
         }
 
@@ -313,6 +363,10 @@ export class PgSqlService {
 
         const service = this.config.getServiceOrDefault(name);
 
+        if(service.isExternal) {
+            return;
+        }
+
         if(restart) {
             await this.dockerService.removeContainer(service.containerName);
         }
@@ -406,11 +460,11 @@ export class PgSqlService {
         }
 
         if(!database) {
-            const res = await this.query<{datname: string}>(service, "SELECT datname FROM pg_database;");
+            const res = await this.getTables(service);
 
             database = await promptSelect({
                 required: true,
-                options: res.map((r) => r.datname),
+                options: res.map((r) => r.table)
             });
         }
 
@@ -424,12 +478,12 @@ export class PgSqlService {
         const service = this.config.getServiceOrDefault(name);
 
         if(!database) {
-            const res = await this.query<{datname: string}>(service, "SELECT datname FROM pg_database;");
+            const res = await this.getTables(service);
 
             database = await promptSelect({
                 message: "Database",
                 required: true,
-                options: res.map((r) => r.datname),
+                options: res.map((r) => r.table)
             });
         }
 
@@ -452,31 +506,54 @@ export class PgSqlService {
             });
         }
 
-        const container = await this.dockerService.getContainer(service.containerName);
+        const container = !service.isExternal
+            ? await this.dockerService.getContainer(service.containerName)
+            : await this.dockerService.createContainer({
+                name: service.name,
+                image: service.image,
+                tty: true,
+                cmd: ["bash"],
+                networkMode: "host"
+            });
 
         if(!container) {
             throw new Error(`Service "${service.name}" isn't started`);
         }
 
-        const file = this.fs.createWriteStream(`dump/${service.name}/${database}/${filename}`);
-        const exec = await container.exec({
-            Cmd: ["pg_dump", ...service.auth, "--if-exists", "--no-comments", "-c", "-d", database],
-            AttachStdout: true,
-            AttachStderr: true
-        });
-        const stream = await exec.start({
-            hijack: true
-        });
+        try {
+            if(service.isExternal) {
+                await container.start();
+            }
 
-        await new Promise<void>((resolve, reject) => {
-            container.modem.demuxStream(stream, file, process.stderr);
+            const file = this.fs.createWriteStream(`dump/${service.name}/${database}/${filename}`);
+            const exec = await container.exec({
+                Cmd: ["pg_dump", ...service.auth, "--if-exists", "--no-comments", "-c", "-d", database],
+                Env: [
+                    `PGPASSWORD=${service.password}`
+                ],
+                AttachStdout: true,
+                AttachStderr: true
+            });
+            const stream = await exec.start({
+                hijack: true
+            });
 
-            stream
-                .on("finish", resolve)
-                .on("error", reject);
-        });
+            await new Promise<void>((resolve, reject) => {
+                container.modem.demuxStream(stream, file, process.stderr);
 
-        console.info("Backup created");
+                stream
+                    .on("finish", resolve)
+                    .on("error", reject);
+            });
+
+            console.info("Backup created");
+        }
+        finally {
+            if(service.isExternal) {
+                await container.stop();
+                await container.remove();
+            }
+        }
     }
 
     public async deleteBackup(name?: string, database?: string, filename?: string): Promise<void> {
@@ -495,14 +572,12 @@ export class PgSqlService {
                 options: this.fs.readdir(`dump/${service.name}/${database}`)
             });
         }
+
+        this.fs.rm(`dump/${service.name}/${database}/${filename}`);
     }
 
     public async restore(name?: string, database?: string, filename?: string): Promise<void> {
         const service = this.config.getServiceOrDefault(name);
-
-        if(service.isExternal) {
-            throw new Error("Unsupported for external service");
-        }
 
         if(!database) {
             database = await promptSelect({
@@ -520,44 +595,67 @@ export class PgSqlService {
             });
         }
 
-        const container = await this.dockerService.getContainer(service.containerName);
+        const container = !service.isExternal
+            ? await this.dockerService.getContainer(service.containerName)
+            : await this.dockerService.createContainer({
+                name: service.containerName,
+                image: service.image,
+                tty: true,
+                cmd: ["bash"],
+                networkMode: "host"
+            });
 
         if(!container) {
             throw new Error(`Service "${service.name}" isn't started`);
         }
 
-        const file = this.fs.createReadStream(`dump/${service.name}/${database}/${filename}`);
-        const exec = await container.exec({
-            Cmd: ["psql", "--set", "ON_ERROR_STOP=on", ...service.auth, "-d", database],
-            AttachStdin: true,
-            AttachStdout: true,
-            AttachStderr: true
-        });
+        try {
+            if(service.isExternal) {
+                await container.start();
+            }
 
-        const stream = await exec.start({
-            stdin: true,
-            hijack: true
-        });
+            const file = this.fs.createReadStream(`dump/${service.name}/${database}/${filename}`);
+            const exec = await container.exec({
+                Cmd: ["psql", "--set", "ON_ERROR_STOP=on", ...service.auth, "-d", database],
+                Env: [
+                    `PGPASSWORD=${service.password}`
+                ],
+                AttachStdin: true,
+                AttachStdout: true,
+                AttachStderr: true
+            });
 
-        await new Promise<void>((resolve, reject) => {
-            container.modem.demuxStream(stream, new Writable({write: () => undefined}), process.stderr);
+            const stream = await exec.start({
+                stdin: true,
+                hijack: true
+            });
 
-            file
-                .pipe(stream)
-                .on("error", reject);
+            await new Promise<void>((resolve, reject) => {
+                container.modem.demuxStream(stream, new Writable({write: () => undefined}), process.stderr);
 
-            stream
-                .on("end", resolve)
-                .on("error", reject);
-        });
+                file
+                    .pipe(stream)
+                    .on("error", reject);
 
-        const info = await exec.inspect();
+                stream
+                    .on("end", resolve)
+                    .on("error", reject);
+            });
 
-        if(info.ExitCode !== 0) {
-            throw new Error(`Restore failed with exit code ${info.ExitCode}`);
+            const info = await exec.inspect();
+
+            if(info.ExitCode !== 0) {
+                throw new Error(`Restore failed with exit code ${info.ExitCode}`);
+            }
+
+            console.info("Restored");
         }
-
-        console.info("Restored");
+        finally {
+            if(service.isExternal) {
+                await container.stop().catch(() => undefined);
+                await container.remove().catch(() => undefined);
+            }
+        }
     }
 
     public async admin(): Promise<void> {
