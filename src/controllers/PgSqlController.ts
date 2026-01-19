@@ -211,6 +211,16 @@ export class PgSqlController {
         await this.pgSqlService.restore(service, database, filename);
     }
 
+    @Command("pgsql:link <service> <project>")
+    public async link(
+        @Param("service")
+        service: string,
+        @Param("project")
+        project: string
+    ) {
+        return this.pgSqlService.link(service, project);
+    }
+
     @Completion("service", "pgsql:destroy <service>")
     @Completion("service", "pgsql:start [service]")
     @Completion("service", "pgsql:stop [service]")

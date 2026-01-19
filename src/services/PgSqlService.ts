@@ -1,12 +1,13 @@
 import {
     AppConfigService,
-    DockerService,
+    ProjectService,
     FileSystem,
     Injectable,
     PluginConfigService,
     ProxyService,
     LogService
 } from "@wocker/core";
+import {DockerService} from "@wocker/docker-module";
 import {promptInput, promptConfirm, promptSelect} from "@wocker/utils";
 import {drizzle} from "drizzle-orm/node-postgres";
 import {drizzle as drizzleProxy} from "drizzle-orm/pg-proxy";
@@ -26,6 +27,7 @@ export class PgSqlService {
 
     public constructor(
         protected readonly appConfigService: AppConfigService,
+        protected readonly projectService: ProjectService,
         protected readonly pluginConfigService: PluginConfigService,
         protected readonly dockerService: DockerService,
         protected readonly proxyService: ProxyService,
@@ -809,5 +811,16 @@ export class PgSqlService {
         return this.services.map((service) => {
             return service.name;
         });
+    }
+
+    public async link(serviceName: string, projectName: string) {
+        const service = this.config.getService(serviceName),
+              project = this.projectService.get(projectName);
+
+        if(!service) {
+            throw new Error(`Service ${serviceName} not found`);
+        }
+
+        // const project = this.pro
     }
 }

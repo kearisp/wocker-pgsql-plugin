@@ -40,6 +40,11 @@
     "devDependencies": {
         "@types/node": "^24.8.1",
         "@types/pg": "^8.15.6",
+        "@wocker/docker-mock-module": "^0.0.1",
+        "@wocker/docker-module": "^0.0.3",
         "typescript": "^5.8.3"
+    },
+    "peerDependencies": {
+        "@wocker/docker-module": "^0.0.3"
     }
 }
