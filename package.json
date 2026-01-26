@@ -43,7 +43,7 @@
         "@wocker/docker-module": "^0.0.3",
         "typescript": "^5.8.3"
     },
-    "peerDependencies": {
+    "optionalDependencies": {
         "@wocker/docker-module": "^0.0.3"
     }
 }
