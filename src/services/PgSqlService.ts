@@ -1,8 +1,9 @@
 import {
     AppConfigService,
-    DockerService,
+    ProjectService,
     FileSystem,
     Injectable,
+    DockerService,
     PluginConfigService,
     ProxyService,
     LogService
@@ -26,6 +27,7 @@ export class PgSqlService {
 
     public constructor(
         protected readonly appConfigService: AppConfigService,
+        protected readonly projectService: ProjectService,
         protected readonly pluginConfigService: PluginConfigService,
         protected readonly dockerService: DockerService,
         protected readonly proxyService: ProxyService,
@@ -809,5 +811,20 @@ export class PgSqlService {
         return this.services.map((service) => {
             return service.name;
         });
+    }
+
+    public async link(serviceName: string, projectName: string) {
+        if(!this.pluginConfigService.isVersionGTE("1.0.28")) {
+            throw new Error("Please update wocker for using plugin linking");
+        }
+
+        const service = this.config.getService(serviceName),
+              project = this.projectService.get(projectName);
+
+        if(!service) {
+            throw new Error(`Service ${serviceName} not found`);
+        }
+
+        // const project = this.pro
     }
 }
