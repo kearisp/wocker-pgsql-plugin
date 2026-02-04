@@ -3,11 +3,11 @@ import {
     ProjectService,
     FileSystem,
     Injectable,
+    DockerService,
     PluginConfigService,
     ProxyService,
     LogService
 } from "@wocker/core";
-import {DockerService} from "@wocker/docker-module";
 import {promptInput, promptConfirm, promptSelect} from "@wocker/utils";
 import {drizzle} from "drizzle-orm/node-postgres";
 import {drizzle as drizzleProxy} from "drizzle-orm/pg-proxy";
@@ -814,6 +814,10 @@ export class PgSqlService {
     }
 
     public async link(serviceName: string, projectName: string) {
+        if(!this.pluginConfigService.isVersionGTE("1.0.28")) {
+            throw new Error("Please update wocker for using plugin linking");
+        }
+
         const service = this.config.getService(serviceName),
               project = this.projectService.get(projectName);
 

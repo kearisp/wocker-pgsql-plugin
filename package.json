@@ -40,10 +40,6 @@
     "devDependencies": {
         "@types/node": "^24.8.1",
         "@types/pg": "^8.15.6",
-        "@wocker/docker-module": "^0.0.1",
         "typescript": "^5.8.3"
-    },
-    "optionalDependencies": {
-        "@wocker/docker-module": "^0.0.1"
     }
 }
