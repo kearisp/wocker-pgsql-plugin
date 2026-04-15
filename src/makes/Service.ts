@@ -1,3 +1,6 @@
+import {Image} from "@wocker/utils";
+
+
 export const STORAGE_VOLUME = "volume";
 export const STORAGE_FILESYSTEM = "filesystem";
 
@@ -10,7 +13,9 @@ export type ServiceProps = {
     host?: string;
     port?: string | number;
     image?: string;
+    /** @deprecated */
     imageName?: string;
+    /** @deprecated */
     imageVersion?: string;
     storage?: ServiceStorage;
     volume?: string;
@@ -24,8 +29,6 @@ export class Service {
     public host?: string;
     public port?: string | number;
     public _image?: string;
-    public _imageName?: string;
-    public _imageVersion?: string;
     public storage?: ServiceStorage;
     public _volume?: string;
     public containerPort?: number;
@@ -50,9 +53,7 @@ export class Service {
         this.port = port;
         this.user = user;
         this.password = password;
-        this._image = image;
-        this._imageName = imageName;
-        this._imageVersion = imageVersion;
+        this._image = image ? image : (imageName && imageVersion ? `${imageName}:${imageVersion}` : imageName);
         this.containerPort = containerPort;
         this.storage = storage;
         this._volume = volume;
@@ -88,37 +89,35 @@ export class Service {
 
     public get image(): string {
         if(!this._image) {
-            let imageName = this._imageName,
-                imageVersion = this._imageVersion;
-
-            if(!imageName) {
-                imageName = "postgres";
-            }
-
-            if(!imageVersion) {
-                return imageName;
-            }
-
-            return `${imageName}:${imageVersion}`;
+            // let imageName = this._imageName,
+            //     imageVersion = this._imageVersion;
+            //
+            // if(!imageName) {
+            //     imageName = "postgres";
+            // }
+            //
+            // if(!imageVersion) {
+            //     return imageName;
+            // }
+            //
+            // return `${imageName}:${imageVersion}`;
+            return "postgres:latest";
         }
 
         return this._image;
     }
 
-    public set image(image: string) {
+    public set image(image: string | undefined) {
+        if(!image) {
+            delete this._image;
+            return;
+        }
+
+        if(!Image.isValid(image)) {
+            throw new Error(`Invalid image ${image}`);
+        }
+
         this._image = image;
-    }
-
-    public set imageName(imageName: string) {
-        const [, imageVersion] = this.image.split(":");
-
-        this._image = !imageVersion ? imageName : `${imageName}:${imageVersion}`;
-    }
-
-    public set imageVersion(imageVersion: string) {
-        const [imageName] = this.image.split(":");
-
-        this._image = `${imageName}:${imageVersion}`;
     }
 
     public get volume(): string {

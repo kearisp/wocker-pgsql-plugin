@@ -258,6 +258,23 @@ export class PgSqlService {
             }
         }
 
+        if(!serviceProps.containerPort) {
+            const needPort = await promptConfirm({
+                message: "Do you need to expose container port?",
+                default: false
+            });
+
+            if(needPort) {
+                serviceProps.containerPort = await promptInput({
+                    required: true,
+                    message: "Container port:",
+                    type: "number",
+                    min: 1,
+                    default: 5432
+                });
+            }
+        }
+
         this.config.setService(new Service(serviceProps as ServiceProps));
         this.config.save();
     }
@@ -266,13 +283,8 @@ export class PgSqlService {
         const service = this.config.getServiceOrDefault(serviceProps.name);
         let changed = false;
 
-        if(serviceProps.imageName) {
-            service.imageName = serviceProps.imageName;
-            changed = true;
-        }
-
-        if(serviceProps.imageVersion) {
-            service.imageVersion = serviceProps.imageVersion;
+        if(serviceProps.image) {
+            service.image = serviceProps.image;
             changed = true;
         }
 

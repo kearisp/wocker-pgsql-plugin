@@ -4,7 +4,6 @@ import {
     Completion,
     Option,
     Param,
-    AppConfigService,
     DockerService,
     Description
 } from "@wocker/core";
@@ -15,7 +14,6 @@ import {PgSqlService} from "../services/PgSqlService";
 @Description("PostgreSQL commands")
 export class PgSqlController {
     public constructor(
-        protected readonly appConfigService: AppConfigService,
         protected readonly dockerService: DockerService,
         protected readonly pgSqlService: PgSqlService
     ) {}
@@ -40,6 +38,7 @@ export class PgSqlController {
             password,
             skipPassword
         });
+
         await this.pgSqlService.admin();
     }
 
@@ -80,10 +79,7 @@ export class PgSqlController {
         port: string,
         @Option("image", "i")
         @Description("Image name")
-        imageName?: string,
-        @Option("image-version", "I")
-        @Description("Image version")
-        imageVersion?: string,
+        image?: string,
         @Option("container-port")
         @Description("Port on which the database container will be accessible on the host")
         containerPort?: number
@@ -94,8 +90,7 @@ export class PgSqlController {
             password,
             host,
             port,
-            imageName,
-            imageVersion,
+            image,
             containerPort
         });
 
@@ -111,18 +106,14 @@ export class PgSqlController {
         name?: string,
         @Option("image", "i")
         @Description("Image name")
-        imageName?: string,
-        @Option("image-version", "I")
-        @Description("Image version")
-        imageVersion?: string,
+        image?: string,
         @Option("container-port")
         @Description("Port on which the database container will be accessible on the host")
         containerPort?: number
     ): Promise<void> {
         await this.pgSqlService.upgrade({
             name,
-            imageName,
-            imageVersion,
+            image,
             containerPort
         });
     }
@@ -211,15 +202,15 @@ export class PgSqlController {
         await this.pgSqlService.restore(service, database, filename);
     }
 
-    @Command("pgsql:link <service> <project>")
-    public async link(
-        @Param("service")
-        service: string,
-        @Param("project")
-        project: string
-    ) {
-        return this.pgSqlService.link(service, project);
-    }
+    // @Command("pgsql:link <service> <project>")
+    // public async link(
+    //     @Param("service")
+    //     service: string,
+    //     @Param("project")
+    //     project: string
+    // ) {
+    //     return this.pgSqlService.link(service, project);
+    // }
 
     @Completion("service", "pgsql:destroy <service>")
     @Completion("service", "pgsql:start [service]")
