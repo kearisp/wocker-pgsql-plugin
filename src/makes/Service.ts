@@ -89,18 +89,6 @@ export class Service {
 
     public get image(): string {
         if(!this._image) {
-            // let imageName = this._imageName,
-            //     imageVersion = this._imageVersion;
-            //
-            // if(!imageName) {
-            //     imageName = "postgres";
-            // }
-            //
-            // if(!imageVersion) {
-            //     return imageName;
-            // }
-            //
-            // return `${imageName}:${imageVersion}`;
             return "postgres:latest";
         }
 
