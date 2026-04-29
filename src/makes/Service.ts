@@ -1,10 +1,6 @@
 import {Image} from "@wocker/utils";
+import {StorageType} from "../types/StorageType";
 
-
-export const STORAGE_VOLUME = "volume";
-export const STORAGE_FILESYSTEM = "filesystem";
-
-export type ServiceStorage = typeof STORAGE_VOLUME | typeof STORAGE_FILESYSTEM;
 
 export type ServiceProps = {
     name: string;
@@ -17,7 +13,7 @@ export type ServiceProps = {
     imageName?: string;
     /** @deprecated */
     imageVersion?: string;
-    storage?: ServiceStorage;
+    storage?: StorageType;
     volume?: string;
     containerPort?: number;
 };
@@ -29,7 +25,7 @@ export class Service {
     public host?: string;
     public port?: string | number;
     public _image?: string;
-    public storage?: ServiceStorage;
+    public storage?: StorageType;
     public _volume?: string;
     public containerPort?: number;
 
@@ -40,11 +36,11 @@ export class Service {
             port,
             user,
             password,
-            image,
             imageName,
             imageVersion,
+            image = imageName && imageVersion ? `${imageName}:${imageVersion}` : imageName,
             containerPort,
-            storage = STORAGE_FILESYSTEM,
+            storage = StorageType.FS,
             volume
         } = data;
 
@@ -53,7 +49,7 @@ export class Service {
         this.port = port;
         this.user = user;
         this.password = password;
-        this._image = image ? image : (imageName && imageVersion ? `${imageName}:${imageVersion}` : imageName);
+        this._image = image;
         this.containerPort = containerPort;
         this.storage = storage;
         this._volume = volume;
@@ -89,7 +85,7 @@ export class Service {
 
     public get image(): string {
         if(!this._image) {
-            return "postgres:latest";
+            return "postgres:18-alpine";
         }
 
         return this._image;
@@ -116,6 +112,29 @@ export class Service {
         return this._volume;
     }
 
+    public get internalVolume(): string {
+        const {tag} = new Image(this.image),
+              major = this.getPostgresMajorVersion(tag);
+
+        if(major !== null && major >= 18) {
+            return "/var/lib/postgresql";
+        }
+
+        return "/var/lib/postgresql/data";
+    }
+
+    private getPostgresMajorVersion(tag: string | undefined): number | null {
+        if(!tag)
+            return null;
+
+        const match = tag.match(/^(\d+)/);
+
+        if(!match)
+            return null;
+
+        return parseInt(match[1], 10);
+    }
+
     public get defaultVolume(): string {
         return `wocker-pgsql-${this.name}`;
     }
@@ -127,7 +146,7 @@ export class Service {
             port: this.port,
             user: this.user,
             password: this.password,
-            image: this.image,
+            image: this._image,
             containerPort: this.containerPort,
             storage: this.storage,
             volume: this._volume

@@ -163,13 +163,23 @@ export class PgSqlController {
         await this.pgSqlService.admin();
     }
 
-    @Command("pgsql:use <service>")
+    @Command("pgsql:use [service]")
     @Description("Sets the specified PostgreSQL service as the default.")
     public async default(
         @Param("service")
-        service: string
-    ): Promise<void> {
-        await this.pgSqlService.setDefault(service);
+        name?: string
+    ): Promise<string | void> {
+        if(!name) {
+            const service = this.pgSqlService.config.getDefaultService();
+
+            if(!service) {
+                throw new Error(`No default service`);
+            }
+
+            return service.name;
+        }
+
+        await this.pgSqlService.setDefault(name);
     }
 
     @Command("pgsql:backup [service]")
@@ -202,20 +212,10 @@ export class PgSqlController {
         await this.pgSqlService.restore(service, database, filename);
     }
 
-    // @Command("pgsql:link <service> <project>")
-    // public async link(
-    //     @Param("service")
-    //     service: string,
-    //     @Param("project")
-    //     project: string
-    // ) {
-    //     return this.pgSqlService.link(service, project);
-    // }
-
-    @Completion("service", "pgsql:destroy <service>")
     @Completion("service", "pgsql:start [service]")
     @Completion("service", "pgsql:stop [service]")
     @Completion("service", "pgsql:upgrade [service]")
+    @Completion("service", "pgsql:destroy <service>")
     @Completion("service", "pgsql:use <service>")
     public async getServices(): Promise<string[]> {
         return this.pgSqlService.getServices();
