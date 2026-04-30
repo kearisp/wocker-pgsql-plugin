@@ -1,6 +1,7 @@
 {
     "name": "@wocker/pgsql-plugin",
-    "version": "1.0.20",
+    "type": "commonjs",
+    "version": "1.0.21",
     "author": "Kris Papercut <krispcut@gmail.com>",
     "description": "PostgreSQL plugin for wocker",
     "license": "MIT",
@@ -30,7 +31,7 @@
     },
     "dependencies": {
         "@wocker/core": "^1.0.25",
-        "@wocker/utils": "^2.0.3",
+        "@wocker/utils": "^2.0.11",
         "cli-table3": "^0.6.5",
         "csv-parser": "^3.2.0",
         "date-fns": "^4.1.0",

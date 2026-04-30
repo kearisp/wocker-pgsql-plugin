@@ -16,8 +16,9 @@ import CSVParser from "csv-parser";
 import {Writable} from "stream";
 import {format as dateFormat} from "date-fns/format";
 import {Config, AdminConfig} from "../makes/Config";
-import {Service, ServiceProps, ServiceStorage, STORAGE_FILESYSTEM, STORAGE_VOLUME} from "../makes/Service";
+import {Service, ServiceProps} from "../makes/Service";
 import {PgDatabaseTable} from "../table/PgDatabaseTable";
+import {StorageType} from "../types/StorageType";
 
 
 @Injectable()
@@ -233,10 +234,10 @@ export class PgSqlService {
         }
 
         if(!serviceProps.host) {
-            if(!serviceProps.storage || ![STORAGE_VOLUME, STORAGE_FILESYSTEM].includes(serviceProps.storage)) {
-                serviceProps.storage = await promptSelect<ServiceStorage>({
+            if(!serviceProps.storage || ![StorageType.VOLUME, StorageType.FS].includes(serviceProps.storage)) {
+                serviceProps.storage = await promptSelect<StorageType>({
                     message: "Storage:",
-                    options: [STORAGE_VOLUME, STORAGE_FILESYSTEM]
+                    options: [StorageType.VOLUME, StorageType.FS]
                 });
             }
 
@@ -258,6 +259,23 @@ export class PgSqlService {
             }
         }
 
+        if(!serviceProps.containerPort) {
+            const needPort = await promptConfirm({
+                message: "Do you need to expose container port?",
+                default: false
+            });
+
+            if(needPort) {
+                serviceProps.containerPort = await promptInput({
+                    required: true,
+                    message: "Container port:",
+                    type: "number",
+                    min: 1,
+                    default: 5432
+                });
+            }
+        }
+
         this.config.setService(new Service(serviceProps as ServiceProps));
         this.config.save();
     }
@@ -266,13 +284,8 @@ export class PgSqlService {
         const service = this.config.getServiceOrDefault(serviceProps.name);
         let changed = false;
 
-        if(serviceProps.imageName) {
-            service.imageName = serviceProps.imageName;
-            changed = true;
-        }
-
-        if(serviceProps.imageVersion) {
-            service.imageVersion = serviceProps.imageVersion;
+        if(serviceProps.image) {
+            service.image = serviceProps.image;
             changed = true;
         }
 
@@ -309,7 +322,7 @@ export class PgSqlService {
             await this.dockerService.removeContainer(service.containerName);
 
             switch(service.storage) {
-                case STORAGE_VOLUME:
+                case StorageType.VOLUME:
                     if(service.volume !== service.defaultVolume) {
                         console.info(`Deletion of custom volume "${service.volume}" skipped.`);
                         break;
@@ -324,7 +337,7 @@ export class PgSqlService {
                     }
                     break;
 
-                case STORAGE_FILESYSTEM:
+                case StorageType.FS:
                     this.dbFs.rm(service.name, {
                         recursive: true,
                         force: true
@@ -380,10 +393,11 @@ export class PgSqlService {
                 user = "root",
                 password = "root"
             } = service;
+
             const volumes: string[] = [];
 
             switch(service.storage) {
-                case STORAGE_VOLUME:
+                case StorageType.VOLUME:
                     if(!this.pluginConfigService.isVersionGTE("1.0.19")) {
                         throw new Error("Please update wocker for using volume storage");
                     }
@@ -392,11 +406,11 @@ export class PgSqlService {
                         await this.dockerService.createVolume(service.volume);
                     }
 
-                    volumes.push(`${service.volume}:/var/lib/postgresql/data`);
+                    volumes.push(`${service.volume}:${service.internalVolume}`);
                     break;
 
-                case STORAGE_FILESYSTEM:
-                    volumes.push(`${this.dbPath(service.name)}:/var/lib/postgresql/data`);
+                case StorageType.FS:
+                    volumes.push(`${this.dbPath(service.name)}:${service.internalVolume}`);
                     break;
 
                 default:
