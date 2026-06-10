@@ -113,7 +113,7 @@ export class Service {
     }
 
     public get internalVolume(): string {
-        const {tag} = new Image(this.image),
+        const {tag} = Image.parse(this.image),
               major = this.getPostgresMajorVersion(tag);
 
         if(major !== null && major >= 18) {
