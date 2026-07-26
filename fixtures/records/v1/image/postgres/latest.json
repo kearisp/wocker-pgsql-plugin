@@ -1,0 +1,63 @@
+{
+    "Id": "sha256:bfe50b2b0ddd9b55eadedd066fe24c7c6fe06626185b73358c480ea37868024d",
+    "RepoTags": [
+        "postgres:latest"
+    ],
+    "RepoDigests": [
+        "postgres@sha256:bfe50b2b0ddd9b55eadedd066fe24c7c6fe06626185b73358c480ea37868024d"
+    ],
+    "Comment": "buildkit.dockerfile.v0",
+    "Created": "2025-12-29T23:36:40.764472171Z",
+    "Config": {
+        "ExposedPorts": {
+            "5432/tcp": {}
+        },
+        "Env": [
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/lib/postgresql/18/bin",
+            "GOSU_VERSION=1.19",
+            "LANG=en_US.utf8",
+            "PG_MAJOR=18",
+            "PG_VERSION=18.1-1.pgdg13+2",
+            "PGDATA=/var/lib/postgresql/18/docker"
+        ],
+        "Entrypoint": [
+            "docker-entrypoint.sh"
+        ],
+        "Cmd": [
+            "postgres"
+        ],
+        "Volumes": {
+            "/var/lib/postgresql": {}
+        },
+        "StopSignal": "SIGINT"
+    },
+    "Architecture": "amd64",
+    "Os": "linux",
+    "Size": 162229602,
+    "RootFS": {
+        "Type": "layers",
+        "Layers": [
+            "sha256:6a7f953ae30c9f480e6eaf7be8b1ba742bce57a3a83c43e927348e763cff7472",
+            "sha256:d2832a1202ce153aacad13cf560dfc47d6cf11b62e1c1d8b0d9d658babe1554c",
+            "sha256:a1c9a5edd50a6c8b84683ee4b632a9de0a4316366326cf7177314cccd3fc018b",
+            "sha256:3492c6d1538504567db92394f3934428759b78aa3fc1c95e02552525b7a28d1c",
+            "sha256:a95354b7aa1ef84f14eb75aa996efad0f0ea630be8476783d150b8b098a81d41",
+            "sha256:0ebef1d3053b0bbf04bdba636cb339d8a7ac4e6399888a5b5bed802bbf18d7a7",
+            "sha256:ae7c718941f080da3dd0ca201662ab0849db127f9c0f3f1d66dade8fc8376d3c",
+            "sha256:d2d32c8c96f880b48971a0c7d74ef6bb78a6c71f5f603459f67fa40e2c219c33",
+            "sha256:86f34e27eb84b9e786e3fc33d05437b487c2e7109f22a0b696d182e7687bb9de",
+            "sha256:0afc0109ea2df62325795fb9a51c37b7d0026c508cee972a880fc01dbd12f567",
+            "sha256:4000c6ee4a583c40a25d612a7dafb93b4b7abdbd9b167150351821e44900158a",
+            "sha256:4442ff3d8261ced271fee58da8445c6f9eb3f6bc857d0a40be1ed27dbd9fd226",
+            "sha256:03df401152bbbf935f01947877230e0946e17bbcf7a0946ff1451483a092862b"
+        ]
+    },
+    "Metadata": {
+        "LastTagTime": "2026-01-10T23:44:24.893467262Z"
+    },
+    "Descriptor": {
+        "mediaType": "application/vnd.oci.image.index.v1+json",
+        "digest": "sha256:bfe50b2b0ddd9b55eadedd066fe24c7c6fe06626185b73358c480ea37868024d",
+        "size": 10229
+    }
+}

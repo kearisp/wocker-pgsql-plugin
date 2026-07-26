@@ -64,19 +64,19 @@ export class PgSqlController {
     @Description("Creates a PostgreSQL service with configurable user, password, host, and port options.")
     protected async create(
         @Param("service")
-        name: string,
+        name?: string,
         @Option("user", "u")
         @Description("User name")
-        user: string,
+        user?: string,
         @Option("password", "p")
         @Description("Password")
-        password: string,
+        password?: string,
         @Option("host", "h")
         @Description("External host")
-        host: string,
+        host?: string,
         @Option("port", "P")
         @Description("External port")
-        port: string,
+        port?: string,
         @Option("image", "i")
         @Description("Image name")
         image?: string,
@@ -135,7 +135,7 @@ export class PgSqlController {
     }
 
     @Command("pgsql:ls")
-    @Description("Lists all available PostgreSQL tables in the service.")
+    @Description("Lists all available PostgreSQL services.")
     public async list(): Promise<string> {
         return this.pgSqlService.listTable();
     }
@@ -212,11 +212,15 @@ export class PgSqlController {
         await this.pgSqlService.restore(service, database, filename);
     }
 
+    @Completion("service", "pgsql [service]")
     @Completion("service", "pgsql:start [service]")
     @Completion("service", "pgsql:stop [service]")
     @Completion("service", "pgsql:upgrade [service]")
     @Completion("service", "pgsql:destroy <service>")
-    @Completion("service", "pgsql:use <service>")
+    @Completion("service", "pgsql:use [service]")
+    @Completion("service", "pgsql:dump [service]")
+    @Completion("service", "pgsql:backup [service]")
+    @Completion("service", "pgsql:restore [service]")
     public async getServices(): Promise<string[]> {
         return this.pgSqlService.getServices();
     }
