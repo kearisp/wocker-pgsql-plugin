@@ -33,6 +33,7 @@
     },
     "dependencies": {
         "@wocker/core": "^1.0.25",
+        "@wocker/prompts": "^1.0.0",
         "@wocker/utils": "^2.0.11",
         "cli-table3": "^0.6.5",
         "csv-parser": "^3.2.0",
@@ -51,6 +52,7 @@
         "make-coverage-badge": "^1.2.0",
         "memfs": "^4.49.0",
         "ts-jest": "^29.4.9",
+        "ts-node": "^10.9.2",
         "typescript": "^5.8.3"
     }
 }

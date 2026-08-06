@@ -7,7 +7,7 @@ import {
     ProxyService,
     LogService
 } from "@wocker/core";
-import {promptInput, promptConfirm, promptSelect} from "@wocker/utils";
+import {promptInput, promptConfirm, promptSelect} from "@wocker/prompts";
 import {drizzle} from "drizzle-orm/node-postgres";
 import {drizzle as drizzleProxy} from "drizzle-orm/pg-proxy";
 import CliTable from "cli-table3";
