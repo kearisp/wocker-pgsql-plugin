@@ -1,7 +1,7 @@
 {
     "name": "@wocker/pgsql-plugin",
     "type": "commonjs",
-    "version": "1.0.22",
+    "version": "1.0.23",
     "author": "Kris Papercut <krispcut@gmail.com>",
     "description": "PostgreSQL plugin for wocker",
     "license": "MIT",
@@ -25,12 +25,15 @@
     },
     "scripts": {
         "prepublishOnly": "npm run build",
-        "watch": "tsc -w",
-        "build": "tsc",
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "watch": "tsc -w --project tsconfig.build.json",
+        "build": "tsc --project tsconfig.build.json",
+        "test": "jest --colors",
+        "test-watch": "jest --colors --watchAll --coverage",
+        "make-coverage-badge": "make-coverage-badge"
     },
     "dependencies": {
         "@wocker/core": "^1.0.25",
+        "@wocker/prompts": "^1.0.0",
         "@wocker/utils": "^2.0.11",
         "cli-table3": "^0.6.5",
         "csv-parser": "^3.2.0",
@@ -39,8 +42,17 @@
         "pg": "^8.16.3"
     },
     "devDependencies": {
+        "@types/jest": "^30.0.0",
         "@types/node": "^24.8.1",
         "@types/pg": "^8.15.6",
+        "@wocker/docker-mock-module": "^1.0.1",
+        "@wocker/docker-module": "^1.0.1",
+        "@wocker/testing": "^1.0.9",
+        "jest": "^30.3.0",
+        "make-coverage-badge": "^1.2.0",
+        "memfs": "^4.49.0",
+        "ts-jest": "^29.4.9",
+        "ts-node": "^10.9.2",
         "typescript": "^5.8.3"
     }
 }

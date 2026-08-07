@@ -1,6 +1,5 @@
 import {
-    AppConfigService,
-    ProjectService,
+    AppService,
     FileSystem,
     Injectable,
     DockerService,
@@ -8,7 +7,7 @@ import {
     ProxyService,
     LogService
 } from "@wocker/core";
-import {promptInput, promptConfirm, promptSelect} from "@wocker/utils";
+import {promptInput, promptConfirm, promptSelect} from "@wocker/prompts";
 import {drizzle} from "drizzle-orm/node-postgres";
 import {drizzle as drizzleProxy} from "drizzle-orm/pg-proxy";
 import CliTable from "cli-table3";
@@ -27,8 +26,7 @@ export class PgSqlService {
     protected _config?: Config;
 
     public constructor(
-        protected readonly appConfigService: AppConfigService,
-        protected readonly projectService: ProjectService,
+        protected readonly appService: AppService,
         protected readonly pluginConfigService: PluginConfigService,
         protected readonly dockerService: DockerService,
         protected readonly proxyService: ProxyService,
@@ -48,17 +46,11 @@ export class PgSqlService {
     }
 
     public get fs(): FileSystem {
-        let fs = this.pluginConfigService.fs;
-
-        if(!fs) {
-            fs = new FileSystem(this.pluginConfigService.dataPath());
-        }
-
-        return fs;
+        return this.pluginConfigService.fs;
     }
 
     public get dbFs(): FileSystem {
-        return new FileSystem(this.appConfigService.dataPath("db/pgsql"));
+        return this.appService.fs.cd("db/pgsql");
     }
 
     public async query<T = unknown>(service: Service, query: string, headers?: boolean): Promise<T[]> {
@@ -135,7 +127,7 @@ export class PgSqlService {
     }
 
     public dbPath(service: string): string {
-        return this.appConfigService.dataPath("db/pgsql", service);
+        return this.appService.fs.path("db/pgsql", service);
     }
 
     public async init(admin: Partial<AdminConfig>): Promise<void> {
@@ -256,23 +248,6 @@ export class PgSqlService {
                         default: 5432
                     });
                 }
-            }
-        }
-
-        if(!serviceProps.containerPort) {
-            const needPort = await promptConfirm({
-                message: "Do you need to expose container port?",
-                default: false
-            });
-
-            if(needPort) {
-                serviceProps.containerPort = await promptInput({
-                    required: true,
-                    message: "Container port:",
-                    type: "number",
-                    min: 1,
-                    default: 5432
-                });
             }
         }
 
@@ -825,20 +800,5 @@ export class PgSqlService {
         return this.services.map((service) => {
             return service.name;
         });
-    }
-
-    public async link(serviceName: string, projectName: string) {
-        if(!this.pluginConfigService.isVersionGTE("1.0.28")) {
-            throw new Error("Please update wocker for using plugin linking");
-        }
-
-        const service = this.config.getService(serviceName),
-              project = this.projectService.get(projectName);
-
-        if(!service) {
-            throw new Error(`Service ${serviceName} not found`);
-        }
-
-        // const project = this.pro
     }
 }

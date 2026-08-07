@@ -7,6 +7,7 @@
 [![License](https://img.shields.io/npm/l/@wocker/pgsql-plugin)](https://github.com/kearisp/wocker-pgsql-plugin/blob/master/LICENSE)
 
 [![npm total downloads](https://img.shields.io/npm/dt/@wocker/pgsql-plugin.svg)](https://www.npmjs.com/package/@wocker/pgsql-plugin)
+![Coverage](https://gist.githubusercontent.com/kearisp/f17f46c6332ea3bb043f27b0bddefa9f/raw/coverage-wocker-pgsql-plugin-latest.svg)
 
 ## Installation
 
@@ -37,5 +38,3 @@ This will enable tab completion for `ws` commands, providing a more convenient a
 Wocker is a powerful tool for managing your web project's Docker workspace. It provides a convenient and efficient way to set up and manage your Docker containers.
 
 For more information and detailed usage, please refer to the [documentation](https://kearisp.github.io/wocker).
-
-
