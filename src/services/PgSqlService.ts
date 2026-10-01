@@ -397,6 +397,7 @@ export class PgSqlService {
                 image: service.image,
                 restart: "always",
                 volumes: volumes,
+                internal: true,
                 env: {
                     POSTGRES_USER: user,
                     POSTGRES_PASSWORD: password
@@ -502,6 +503,7 @@ export class PgSqlService {
             : await this.dockerService.createContainer({
                 name: service.name,
                 image: service.image,
+                internal: true,
                 tty: true,
                 cmd: ["bash"],
                 networkMode: "host"
@@ -592,6 +594,7 @@ export class PgSqlService {
                 name: service.containerName,
                 image: service.image,
                 tty: true,
+                internal: true,
                 cmd: ["bash"],
                 networkMode: "host"
             });
@@ -728,6 +731,7 @@ export class PgSqlService {
                 image: "dpage/pgadmin4:latest",
                 user: "root:root",
                 restart: "always",
+                internal: true,
                 entrypoint: [
                     "/bin/sh", "-c",
                     [

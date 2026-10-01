@@ -1,4 +1,4 @@
-import {Image} from "@wocker/utils";
+import {Image} from "@wocker/helpers";
 import {StorageType} from "../types/StorageType";
 
 
